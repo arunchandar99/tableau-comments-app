@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Comments App - Financial Performance Feed</title>
+    <link rel="stylesheet" href="comments-app.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <div class="app-header">
+            <div class="header-content">
+                <h1 class="app-title">
+                    <i class="fas fa-comments"></i>
+                    Financial Performance Feed
+                </h1>
+                <button class="new-post-btn" id="newPostBtn">
+                    <i class="fas fa-plus"></i>
+                    New Post
+                </button>
+            </div>
+        </div>
+
+        <!-- Filters -->
+        <div class="filters-container">
+            <div class="filters-content">
+                <div class="filter-group">
+                    <label for="monthFilter">Month</label>
+                    <select id="monthFilter" class="filter-select">
+                        <option value="">All Months</option>
+                        <option value="1">January</option>
+                        <option value="2">February</option>
+                        <option value="3">March</option>
+                        <option value="4">April</option>
+                        <option value="5">May</option>
+                        <option value="6">June</option>
+                        <option value="7">July</option>
+                        <option value="8">August</option>
+                        <option value="9">September</option>
+                        <option value="10">October</option>
+                        <option value="11">November</option>
+                        <option value="12">December</option>
+                    </select>
+                </div>
+
+                <div class="filter-group">
+                    <label for="yearFilter">Year</label>
+                    <select id="yearFilter" class="filter-select">
+                        <option value="">All Years</option>
+                        <option value="2023">2023</option>
+                        <option value="2024">2024</option>
+                        <option value="2025">2025</option>
+                    </select>
+                </div>
+
+                <div class="filter-group">
+                    <label for="typeFilter">Post Type</label>
+                    <select id="typeFilter" class="filter-select">
+                        <option value="">All Types</option>
+                        <option value="Monthly Review">Monthly Review</option>
+                        <option value="Operations Update">Operations Update</option>
+                        <option value="Market Alert">Market Alert</option>
+                        <option value="Achievement">Achievement</option>
+                    </select>
+                </div>
+
+                <button class="clear-filters-btn" id="clearFiltersBtn">
+                    <i class="fas fa-times"></i>
+                    Clear Filters
+                </button>
+            </div>
+
+            <div class="results-counter" id="resultsCounter">
+                Showing 0 posts
+            </div>
+        </div>
+
+        <!-- Feed Container -->
+        <div class="feed-container" id="feedContainer">
+            <!-- Posts will be dynamically inserted here -->
+        </div>
+
+        <!-- Loading Spinner -->
+        <div class="loading-spinner" id="loadingSpinner">
+            <div class="spinner"></div>
+            <p>Loading posts...</p>
+        </div>
+
+        <!-- Empty State -->
+        <div class="empty-state" id="emptyState" style="display: none;">
+            <i class="fas fa-comment-slash"></i>
+            <h3>No posts found</h3>
+            <p>Try adjusting your filters or create a new post to get started.</p>
+        </div>
+    </div>
+
+    <!-- New Post Modal -->
+    <div class="modal-overlay" id="modalOverlay">
+        <div class="modal-container">
+            <div class="modal-header">
+                <h2>Create New Post</h2>
+                <button class="close-modal-btn" id="closeModalBtn">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <div class="modal-body">
+                <form id="newPostForm">
+                    <div class="form-group">
+                        <label for="postType">Post Type *</label>
+                        <select id="postType" class="form-select" required>
+                            <option value="">Select post type...</option>
+                            <option value="Monthly Review">Monthly Review</option>
+                            <option value="Operations Update">Operations Update</option>
+                            <option value="Market Alert">Market Alert</option>
+                            <option value="Achievement">Achievement</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="metricValue">Key Metric *</label>
+                        <input type="text" id="metricValue" class="form-input" placeholder="e.g., $2.4M (+12%)" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="metricLabel">Metric Label *</label>
+                        <input type="text" id="metricLabel" class="form-input" placeholder="e.g., November Revenue" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="postContent">Content *</label>
+                        <div class="rich-text-toolbar">
+                            <button type="button" class="toolbar-btn color-btn" data-command="foreColor" title="Change Text Color">
+                                <i class="fas fa-palette"></i>
+                                Text Color
+                            </button>
+                            <input type="color" id="postTextColorPicker" class="color-picker" value="#ff0000">
+                            <button type="button" class="toolbar-btn color-btn" data-command="backColor" title="Highlight Text">
+                                <i class="fas fa-highlighter"></i>
+                                Highlight
+                            </button>
+                            <input type="color" id="postBgColorPicker" class="color-picker" value="#ffff00">
+                        </div>
+                        <div id="postContent" class="rich-text-editor" contenteditable="true" placeholder="Share your insights..."></div>
+                    </div>
+
+                    <div class="modal-actions">
+                        <button type="button" class="btn-cancel" id="cancelPostBtn">Cancel</button>
+                        <button type="submit" class="btn-primary">
+                            <i class="fas fa-paper-plane"></i>
+                            Post
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Comments Modal -->
+    <div class="modal-overlay" id="commentsModal">
+        <div class="modal-container">
+            <div class="modal-header">
+                <h2>Comments</h2>
+                <button class="close-modal-btn" id="closeCommentsBtn">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div id="commentsContainer" class="comments-container">
+                    <!-- Comments will be rendered here -->
+                </div>
+
+                <div class="add-comment-section">
+                    <textarea id="commentInput" class="comment-textarea" placeholder="Write a comment..." rows="3"></textarea>
+                    <div class="comment-actions">
+                        <button type="button" class="btn-cancel" id="cancelCommentBtn">Cancel</button>
+                        <button type="button" class="btn-primary" id="submitCommentBtn">
+                            <i class="fas fa-paper-plane"></i>
+                            Post Comment
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="lib/tableau.extensions.1.13.0.js"></script>
+    <script src="comments-app.js"></script>
+</body>
+</html>
