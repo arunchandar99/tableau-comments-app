@@ -10,8 +10,11 @@ async function initializeApp() {
         await tableau.extensions.initializeAsync();
         console.log('Comments App initialized successfully');
 
-        // Load existing posts from localStorage
-        loadPostsFromStorage();
+        // Initialize Snowflake API
+        await snowflakeAPI.initialize();
+
+        // Load existing posts from Snowflake (with localStorage fallback)
+        await loadPostsFromStorage();
 
         // Setup event listeners
         setupEventListeners();
@@ -67,20 +70,35 @@ function createPost(postData) {
     return post;
 }
 
-// Storage Functions
-function loadPostsFromStorage() {
-    const storedPosts = localStorage.getItem('commentsApp_posts');
-    if (storedPosts) {
-        posts = JSON.parse(storedPosts);
-    } else {
-        // Add some sample data for MVP
-        posts = getSamplePosts();
-        savePostsToStorage();
+// Storage Functions - Now uses Snowflake with localStorage fallback
+async function loadPostsFromStorage() {
+    try {
+        posts = await snowflakeAPI.loadPosts();
+
+        if (posts.length === 0) {
+            // Add some sample data for MVP
+            posts = getSamplePosts();
+            await savePostsToStorage();
+        }
+    } catch (error) {
+        console.error('Error loading posts from Snowflake, using localStorage fallback:', error);
+        const storedPosts = localStorage.getItem('commentsApp_posts');
+        if (storedPosts) {
+            posts = JSON.parse(storedPosts);
+        } else {
+            posts = getSamplePosts();
+            localStorage.setItem('commentsApp_posts', JSON.stringify(posts));
+        }
     }
 }
 
-function savePostsToStorage() {
-    localStorage.setItem('commentsApp_posts', JSON.stringify(posts));
+async function savePostsToStorage() {
+    try {
+        await snowflakeAPI.savePosts(posts);
+    } catch (error) {
+        console.error('Error saving posts to Snowflake, using localStorage fallback:', error);
+        localStorage.setItem('commentsApp_posts', JSON.stringify(posts));
+    }
 }
 
 // Sample Data for MVP
@@ -473,24 +491,27 @@ function submitComment() {
     showNotification('Comment posted successfully!');
 }
 
-function deletePost(postId) {
+async function deletePost(postId) {
     // Show confirmation dialog
     if (confirm('Are you sure you want to delete this post? This action cannot be undone.')) {
-        // Find and remove the post
-        const postIndex = posts.findIndex(p => p.id === postId);
+        try {
+            // Delete from Snowflake first
+            await snowflakeAPI.deletePost(postId);
 
-        if (postIndex !== -1) {
-            // Remove from posts array
-            posts.splice(postIndex, 1);
-
-            // Save to storage
-            savePostsToStorage();
+            // Find and remove from local array
+            const postIndex = posts.findIndex(p => p.id === postId);
+            if (postIndex !== -1) {
+                posts.splice(postIndex, 1);
+            }
 
             // Refresh the feed
             applyFilters();
 
             // Show success notification
             showNotification('Post deleted successfully!');
+        } catch (error) {
+            console.error('Error deleting post:', error);
+            showNotification('Error deleting post. Please try again.');
         }
     }
 }
