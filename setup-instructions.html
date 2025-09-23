@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Deploy Tableau Comments App</title>
+    <style>
+        body { font-family: Arial; max-width: 800px; margin: 20px auto; padding: 20px; }
+        .step { background: #f5f5f5; padding: 15px; margin: 10px 0; border-radius: 5px; }
+        .code { background: #222; color: #0f0; padding: 10px; border-radius: 3px; font-family: monospace; }
+        .button { background: #28a745; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; }
+        .warning { background: #fff3cd; border: 1px solid #ffeaa7; padding: 10px; border-radius: 5px; }
+    </style>
+</head>
+<body>
+    <h1>🚀 Deploy Your Tableau Comments App</h1>
+
+    <div class="warning">
+        <strong>⚠️ Important:</strong> You need a GitHub account. <a href="https://github.com/signup" target="_blank">Sign up here</a> if you don't have one.
+    </div>
+
+    <div class="step">
+        <h3>Step 1: Create GitHub Repository</h3>
+        <p>1. <a href="https://github.com/new" target="_blank" class="button">Create New Repository</a></p>
+        <p>2. Repository name: <code>tableau-comments-app</code></p>
+        <p>3. Make it <strong>Public</strong> ✅</p>
+        <p>4. Don't initialize with README</p>
+        <p>5. Click "Create Repository"</p>
+    </div>
+
+    <div class="step">
+        <h3>Step 2: Deploy Your App</h3>
+        <p>Open Terminal and run:</p>
+        <div class="code">
+            cd "/Users/arunchandar/Desktop/Tableau Extensions/comments-app"<br>
+            ./deploy.sh YOUR_GITHUB_USERNAME
+        </div>
+        <p><strong>Replace YOUR_GITHUB_USERNAME with your actual GitHub username!</strong></p>
+    </div>
+
+    <div class="step">
+        <h3>Step 3: Enable GitHub Pages</h3>
+        <p>1. Go to your repository on GitHub</p>
+        <p>2. Click <strong>Settings</strong> tab</p>
+        <p>3. Scroll to <strong>Pages</strong> section</p>
+        <p>4. Source: <strong>Deploy from a branch</strong></p>
+        <p>5. Branch: <strong>main</strong>, Folder: <strong>/ (root)</strong></p>
+        <p>6. Click <strong>Save</strong></p>
+    </div>
+
+    <div class="step">
+        <h3>Step 4: Use in Office</h3>
+        <p>✅ Your app will be live at: <code>https://YOUR_USERNAME.github.io/tableau-comments-app/</code></p>
+        <p>✅ Copy the updated <code>comments-app.trex</code> file to your office computer</p>
+        <p>✅ Add extension to Tableau using the TREX file</p>
+    </div>
+
+    <script>
+        // Auto-open GitHub new repo page
+        setTimeout(() => {
+            if (confirm("Open GitHub to create repository now?")) {
+                window.open('https://github.com/new', '_blank');
+            }
+        }, 2000);
+    </script>
+</body>
+</html>
