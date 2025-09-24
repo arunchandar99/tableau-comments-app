@@ -3,7 +3,7 @@
 
 const SNOWFLAKE_CONFIG = {
     // Your Snowflake account URL (e.g., 'abc12345.snowflakecomputing.com')
-    account: 'YOUR_ACCOUNT.snowflakecomputing.com',
+    account: 'ZDDMCAD-FGC62251.snowflakecomputing.com',
 
     // Database and schema
     database: 'TABLEAU_EXTENSIONS',
