@@ -12,7 +12,7 @@ class SnowflakeDirectAPI {
             warehouse: 'COMPUTE_WH'
         };
         this.isConnected = false;
-        this.demoMode = true; // Set to true for demonstration
+        this.demoMode = false; // Set to false for real Snowflake integration
     }
 
     async initialize() {
