@@ -352,7 +352,7 @@ function renderComments(comments) {
                 <div class="comment-author">${comment.author}</div>
                 <div class="comment-content" id="content-${comment.id}">${comment.content}</div>
                 <div class="comment-edit-form" id="edit-form-${comment.id}" style="display: none;">
-                    <textarea class="comment-edit-textarea" id="edit-textarea-${comment.id}">${comment.content}</textarea>
+                    <textarea class="comment-edit-textarea" id="edit-textarea-${comment.id}"></textarea>
                     <div class="comment-edit-actions">
                         <button type="button" class="btn-cancel" onclick="cancelEditComment('${comment.id}')">Cancel</button>
                         <button type="button" class="btn-primary" onclick="saveEditComment('${comment.id}')">Save</button>
@@ -367,6 +367,14 @@ function renderComments(comments) {
             </div>
         </div>
     `).join('');
+
+    // Set textarea values safely after rendering
+    comments.forEach(comment => {
+        const textarea = document.getElementById(`edit-textarea-${comment.id}`);
+        if (textarea) {
+            textarea.value = comment.content;
+        }
+    });
 }
 
 function setupCommentEventListeners() {
@@ -682,6 +690,12 @@ function updateResultsCounter() {
 // Utility Functions
 function generateId() {
     return Date.now().toString(36) + Math.random().toString(36).substr(2);
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
 }
 
 function getTimeAgo(timestamp) {
