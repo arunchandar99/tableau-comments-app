@@ -50,12 +50,31 @@ export default async function handler(req, res) {
                 result = await loadComments(body.postId);
                 break;
 
+            case 'getSyncSQL':
+                result = {
+                    success: true,
+                    sql: getAllPendingSQL(),
+                    pendingCount: pendingSQLStatements.filter(item => !item.executed).length,
+                    message: 'SQL statements ready for execution in Snowflake'
+                };
+                break;
+
+            case 'markSynced':
+                // Mark all statements as executed
+                pendingSQLStatements.forEach(item => item.executed = true);
+                result = {
+                    success: true,
+                    message: 'All statements marked as synced'
+                };
+                break;
+
             case 'test':
                 result = {
                     success: true,
-                    message: 'API is working! Ready for automatic sync.',
+                    message: 'API is working! Posts will queue SQL for manual execution.',
                     timestamp: new Date().toISOString(),
-                    status: 'connected'
+                    status: 'connected',
+                    pendingSQL: pendingSQLStatements.length
                 };
                 break;
 
@@ -269,109 +288,55 @@ async function loadComments(postId) {
     }
 }
 
-// Execute SQL in Snowflake using REST API with proper authentication
+// Store SQL statements for batch execution (honest approach)
+let pendingSQLStatements = [];
+
+// Generate and queue SQL for Snowflake execution
 async function executeSnowflakeSQL(sqlStatement) {
     try {
-        console.log('🔐 Authenticating with Snowflake...');
+        console.log('📝 Generating SQL for Snowflake execution:', sqlStatement);
 
-        // Use the SQL API endpoint with basic authentication
-        const sqlUrl = `https://${snowflakeConfig.account}/api/v2/statements`;
-
-        // Create authentication header
-        const auth = Buffer.from(`${snowflakeConfig.username}:${snowflakeConfig.password}`).toString('base64');
-
-        const response = await fetch(sqlUrl, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Accept': 'application/json',
-                'Authorization': `Basic ${auth}`,
-                'X-Snowflake-Authorization-Token-Type': 'KEYPAIR_JWT'
-            },
-            body: JSON.stringify({
-                statement: sqlStatement,
-                timeout: 60,
-                database: snowflakeConfig.database,
-                schema: snowflakeConfig.schema,
-                warehouse: 'COMPUTE_WH',
-                role: 'ACCOUNTADMIN'
-            })
+        // Store the SQL statement for batch execution
+        pendingSQLStatements.push({
+            sql: sqlStatement,
+            timestamp: new Date().toISOString(),
+            executed: false
         });
 
-        console.log('📡 Snowflake API response status:', response.status);
-
-        if (!response.ok) {
-            const errorText = await response.text();
-            console.error('❌ Snowflake API error:', errorText);
-
-            // If authentication fails, try simulated execution for testing
-            if (response.status === 401 || response.status === 403) {
-                console.log('🔄 Authentication failed, using test mode for development');
-                return await simulateSnowflakeExecution(sqlStatement);
-            }
-
-            throw new Error(`Snowflake API error: ${response.status} ${response.statusText}`);
-        }
-
-        const responseData = await response.json();
-        console.log('✅ Snowflake API response:', responseData);
+        console.log(`✅ SQL queued for execution (${pendingSQLStatements.length} statements pending)`);
 
         return {
             success: true,
-            data: responseData.data || [],
-            message: 'SQL executed successfully in Snowflake'
+            data: [],
+            message: `SQL queued for execution. Run the generated SQL in Snowflake to sync data.`,
+            queued: true,
+            pendingCount: pendingSQLStatements.length
         };
 
     } catch (error) {
-        console.error('❌ Snowflake execution error:', error.message);
-
-        // Fallback to simulation for development/testing
-        console.log('🔄 Using simulation mode due to connection issues');
-        return await simulateSnowflakeExecution(sqlStatement);
+        console.error('❌ Error queuing SQL:', error.message);
+        return {
+            success: false,
+            error: error.message
+        };
     }
 }
 
-// Simulate Snowflake execution for testing when connection fails
-async function simulateSnowflakeExecution(sqlStatement) {
-    console.log('🧪 Simulating Snowflake execution:', sqlStatement);
+// Get all pending SQL statements for manual execution
+function getAllPendingSQL() {
+    const header = `-- Snowflake Sync SQL - Generated ${new Date().toISOString()}
+-- Execute this in your Snowflake worksheet to sync all data
+-- Database: ${snowflakeConfig.database}.${snowflakeConfig.schema}
 
-    // For INSERT statements, simulate success
-    if (sqlStatement.toUpperCase().includes('INSERT')) {
-        console.log('✅ Simulated INSERT success');
-        return {
-            success: true,
-            data: [],
-            message: 'SQL executed successfully (simulated)',
-            simulated: true
-        };
-    }
+USE DATABASE ${snowflakeConfig.database};
+USE SCHEMA ${snowflakeConfig.schema};
 
-    // For SELECT statements, return empty result set
-    if (sqlStatement.toUpperCase().includes('SELECT')) {
-        console.log('✅ Simulated SELECT success (empty result)');
-        return {
-            success: true,
-            data: [],
-            message: 'Query executed successfully (simulated)',
-            simulated: true
-        };
-    }
+`;
 
-    // For DELETE statements, simulate success
-    if (sqlStatement.toUpperCase().includes('DELETE')) {
-        console.log('✅ Simulated DELETE success');
-        return {
-            success: true,
-            data: [],
-            message: 'Delete executed successfully (simulated)',
-            simulated: true
-        };
-    }
+    const statements = pendingSQLStatements
+        .filter(item => !item.executed)
+        .map(item => `-- Generated: ${item.timestamp}\n${item.sql}`)
+        .join('\n\n');
 
-    return {
-        success: true,
-        data: [],
-        message: 'SQL executed successfully (simulated)',
-        simulated: true
-    };
+    return header + statements;
 }
