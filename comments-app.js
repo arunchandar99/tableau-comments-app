@@ -60,7 +60,7 @@ function createPost(postData) {
         metricLabel: postData.metricLabel,
         content: postData.content,
         author: 'Current User', // In MVP, hardcoded
-        timestamp: new Date().toISOString(),
+        timestamp: Date.now(), // Use consistent timestamp format (milliseconds)
         likes: 0,
         comments: []
     };
@@ -111,7 +111,7 @@ function getSamplePosts() {
             metricLabel: 'November Revenue',
             content: 'Excellent performance this month! Our revenue exceeded targets by 12%. Key drivers were the Q4 marketing campaign and strong holiday sales.',
             author: 'Sarah Chen',
-            timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(), // 2 hours ago
+            timestamp: Date.now() - 2 * 60 * 60 * 1000, // 2 hours ago
             likes: 8,
             comments: []
         },
@@ -122,7 +122,7 @@ function getSamplePosts() {
             metricLabel: 'Market Share Growth',
             content: 'Great news team! We\'ve gained significant market share this quarter. Our competitive positioning strategy is paying off.',
             author: 'Mike Rodriguez',
-            timestamp: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(), // 4 hours ago
+            timestamp: Date.now() - 4 * 60 * 60 * 1000, // 4 hours ago
             likes: 12,
             comments: []
         }
@@ -151,7 +151,7 @@ function handleModalOverlayClick(e) {
 }
 
 // Form Handling
-function handleNewPostSubmit(e) {
+async function handleNewPostSubmit(e) {
     e.preventDefault();
 
     const formData = {
@@ -170,9 +170,11 @@ function handleNewPostSubmit(e) {
     // Create post
     const newPost = createPost(formData);
 
-    // Update UI
+    // Update UI immediately
     closeNewPostModal();
-    applyFilters();
+
+    // Clear any existing filters to ensure new post is visible
+    clearFilters();
 
     // Show success message
     showNotification('Post created successfully!');
