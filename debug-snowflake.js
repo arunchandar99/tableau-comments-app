@@ -97,12 +97,25 @@ class DebugSnowflakeAPI {
                         <strong>${timestamp}</strong><br>
                         <em>${description}</em>
                     </div>
-                    <button onclick="navigator.clipboard.writeText(this.nextElementSibling.textContent); alert('SQL copied!')"
-                            style="font-size: 8px; padding: 2px 4px; background: #007acc; color: white; border: none; border-radius: 2px; cursor: pointer;">
+                    <button onclick="
+                        const sqlText = this.parentElement.nextElementSibling.textContent;
+                        const textArea = document.createElement('textarea');
+                        textArea.value = sqlText;
+                        document.body.appendChild(textArea);
+                        textArea.select();
+                        textArea.setSelectionRange(0, 99999);
+                        try {
+                            document.execCommand('copy');
+                            alert('SQL copied to clipboard!');
+                        } catch(e) {
+                            alert('Copy failed. Please select and copy the SQL text manually.');
+                        }
+                        document.body.removeChild(textArea);
+                    " style="font-size: 8px; padding: 2px 4px; background: #007acc; color: white; border: none; border-radius: 2px; cursor: pointer;">
                         Copy SQL
                     </button>
                 </div>
-                <pre style="background: #f8f8f8; padding: 5px; margin: 5px 0; font-family: monospace; font-size: 8px; white-space: pre-wrap; border: 1px solid #ddd; max-height: 100px; overflow-y: auto;">${sql}</pre>
+                <textarea readonly onclick="this.select()" style="width: 100%; height: 80px; font-family: monospace; font-size: 9px; background: #f8f8f8; border: 1px solid #ddd; padding: 5px; resize: vertical;">${sql}</textarea>
             `;
 
             sqlOutput.appendChild(sqlDiv);
