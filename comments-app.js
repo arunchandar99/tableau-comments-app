@@ -101,6 +101,17 @@ async function savePostsToStorage() {
     }
 }
 
+async function saveCommentToSnowflake(postId, comment) {
+    try {
+        await snowflakeAPI.saveComment(postId, comment);
+        console.log('✅ Comment saved to Snowflake individually');
+    } catch (error) {
+        console.error('Error saving comment to Snowflake:', error);
+        // Fallback to saving all posts if individual comment save fails
+        savePostsToStorage();
+    }
+}
+
 // Sample Data for MVP
 function getSamplePosts() {
     return [
@@ -477,8 +488,8 @@ function submitComment() {
     // Add comment to post
     post.comments.push(newComment);
 
-    // Save to storage
-    savePostsToStorage();
+    // Save only the new comment to Snowflake (not all posts)
+    saveCommentToSnowflake(currentPostId, newComment);
 
     // Re-render comments
     renderComments(post.comments);
