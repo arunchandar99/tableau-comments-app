@@ -121,11 +121,18 @@ class DebugSnowflakeAPI {
         return true;
     }
 
-    async savePost(post) {
+    async savePosts(posts) {
         try {
-            console.log('🐛 savePost called with:', post);
+            console.log('🐛 savePosts called with:', posts);
 
-            const sql = `INSERT INTO ${this.config.database}.${this.config.schema}.POSTS
+            if (!Array.isArray(posts) || posts.length === 0) {
+                this.logSQL('-- No posts to save', 'SAVE POSTS');
+                return true;
+            }
+
+            // Generate SQL for each post
+            for (const post of posts) {
+                const sql = `INSERT INTO ${this.config.database}.${this.config.schema}.POSTS
 (ID, POST_TYPE, METRIC_VALUE, METRIC_LABEL, CONTENT, AUTHOR, TIMESTAMP_MS, LIKES)
 VALUES (
     '${post.id}',
@@ -136,9 +143,17 @@ VALUES (
     '${post.author || 'Tableau User'}',
     ${post.timestamp},
     ${post.likes || 0}
-);`;
+) ON CONFLICT (ID) DO UPDATE SET
+    POST_TYPE = excluded.POST_TYPE,
+    METRIC_VALUE = excluded.METRIC_VALUE,
+    METRIC_LABEL = excluded.METRIC_LABEL,
+    CONTENT = excluded.CONTENT,
+    AUTHOR = excluded.AUTHOR,
+    TIMESTAMP_MS = excluded.TIMESTAMP_MS,
+    LIKES = excluded.LIKES;`;
 
-            this.logSQL(sql, 'SAVE POST');
+                this.logSQL(sql, `SAVE POST: ${post.metricLabel || post.id}`);
+            }
 
             console.log('🐛 SQL logged to debug panel');
 
@@ -152,10 +167,15 @@ VALUES (
 
             return true;
         } catch (error) {
-            console.error('🐛 Error in savePost:', error);
+            console.error('🐛 Error in savePosts:', error);
             this.logSQL(`ERROR: ${error.message}`, 'ERROR');
             return false;
         }
+    }
+
+    async savePost(post) {
+        // Backward compatibility - call savePosts with single post array
+        return await this.savePosts([post]);
     }
 
     async loadPosts() {
