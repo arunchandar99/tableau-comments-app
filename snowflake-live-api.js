@@ -163,9 +163,29 @@ class LiveSnowflakeAPI {
 
             console.log('✅ Posts saved successfully to Snowflake!');
 
-            // Show success notification
-            if (typeof showNotification === 'function') {
-                showNotification(`✅ ${posts.length} post(s) automatically saved to Snowflake!`);
+            // Show SQL if generated
+            if (result.sql) {
+                // Show the SQL in the debug panel
+                const debugElement = document.getElementById('debug-info');
+                if (debugElement) {
+                    debugElement.innerHTML = `
+                        ✅ API: ${this.baseURL}<br>
+                        📋 SQL Generated - <button onclick="
+                            navigator.clipboard.writeText('${result.sql.replace(/'/g, "\\'")}');
+                            alert('SQL copied! Paste in Snowflake to sync data.');
+                        " style="font-size: 10px; padding: 2px 4px; background: #007acc; color: white; border: none; border-radius: 2px; cursor: pointer;">Copy SQL</button>
+                    `;
+                }
+
+                // Show notification with SQL info
+                if (typeof showNotification === 'function') {
+                    showNotification(`✅ ${posts.length} post(s) saved! SQL generated - check debug panel.`);
+                }
+            } else {
+                // Show success notification
+                if (typeof showNotification === 'function') {
+                    showNotification(`✅ ${posts.length} post(s) automatically saved to Snowflake!`);
+                }
             }
 
             return true;
