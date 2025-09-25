@@ -1,8 +1,13 @@
-// Simple Mock API that simulates database operations
-// This will work reliably while we set up the real database connection
+// Live Snowflake API with Real Database Operations
+// Direct execution of SQL in Snowflake database
 
-let mockPosts = [];
-let mockComments = {};
+const snowflakeConfig = {
+    account: 'ZDDMCAD-FGC62251.snowflakecomputing.com',
+    username: 'ARUNCHANDAR',
+    password: 'Password@123',
+    database: 'TABLEAU_EXTENSIONS',
+    schema: 'COMMENTS_APP'
+};
 
 // API Handler
 export default async function handler(req, res) {
@@ -70,7 +75,7 @@ export default async function handler(req, res) {
     }
 }
 
-// Save posts - stores in mock database and generates SQL
+// Save posts - executes directly in Snowflake
 async function savePosts(posts) {
     if (!Array.isArray(posts)) {
         posts = [posts];
@@ -82,25 +87,16 @@ async function savePosts(posts) {
 
     try {
         const results = [];
-        const sqlStatements = [];
 
         for (const post of posts) {
-            // Store in mock database
-            const existingIndex = mockPosts.findIndex(p => p.id === post.id);
-            if (existingIndex >= 0) {
-                mockPosts[existingIndex] = post;
-            } else {
-                mockPosts.push(post);
-            }
-
-            // Generate SQL for Snowflake
+            // Clean content for SQL insertion
             const cleanContent = String(post.content || '')
                 .replace(/'/g, "''")
                 .replace(/\n/g, ' ')
                 .replace(/\r/g, '')
                 .replace(/\t/g, ' ');
 
-            const sql = `INSERT INTO TABLEAU_EXTENSIONS.COMMENTS_APP.POSTS
+            const sql = `INSERT INTO ${snowflakeConfig.database}.${snowflakeConfig.schema}.POSTS
 (ID, POST_TYPE, METRIC_VALUE, METRIC_LABEL, CONTENT, AUTHOR, TIMESTAMP_MS, LIKES)
 VALUES (
     '${String(post.id || '').replace(/'/g, "''")}',
@@ -113,101 +109,105 @@ VALUES (
     ${parseInt(post.likes) || 0}
 );`;
 
-            sqlStatements.push(sql);
-            results.push({ postId: post.id, success: true });
+            // Execute SQL in Snowflake
+            const executeResult = await executeSnowflakeSQL(sql);
+
+            if (executeResult.success) {
+                results.push({ postId: post.id, success: true });
+                console.log(`✅ Post ${post.id} inserted into Snowflake successfully`);
+            } else {
+                console.error(`❌ Failed to insert post ${post.id}:`, executeResult.error);
+                results.push({ postId: post.id, success: false, error: executeResult.error });
+            }
         }
 
-        // Log SQL for Snowflake execution (you can run this manually)
-        console.log('📋 SNOWFLAKE SQL TO EXECUTE:');
-        console.log('='.repeat(50));
-        console.log('USE DATABASE TABLEAU_EXTENSIONS;');
-        console.log('USE SCHEMA COMMENTS_APP;');
-        console.log('');
-        sqlStatements.forEach(sql => console.log(sql + '\n'));
-        console.log('='.repeat(50));
+        const successCount = results.filter(r => r.success).length;
+        const failCount = results.filter(r => !r.success).length;
 
         return {
-            success: true,
+            success: successCount > 0,
             results,
-            message: `${posts.length} posts saved automatically! (SQL logged to console)`,
-            sqlGenerated: true,
-            sql: sqlStatements.join('\n\n')
+            message: `${successCount} posts saved to Snowflake automatically!${failCount > 0 ? ` (${failCount} failed)` : ''}`,
+            executedDirectly: true
         };
 
     } catch (error) {
-        console.error('❌ Error saving posts:', error);
+        console.error('❌ Error saving posts to Snowflake:', error);
         return { success: false, error: error.message };
     }
 }
 
-// Load posts from mock database
+// Load posts from Snowflake database
 async function loadPosts() {
     try {
-        // In the future, this would query Snowflake
-        // For now, return mock data with any real data you've added
+        const sql = `SELECT * FROM ${snowflakeConfig.database}.${snowflakeConfig.schema}.POSTS ORDER BY TIMESTAMP_MS DESC`;
 
-        const posts = mockPosts.map(post => ({
-            id: post.id,
-            type: post.type,
-            metricValue: post.metricValue,
-            metricLabel: post.metricLabel,
-            content: post.content,
-            author: post.author,
-            timestamp: post.timestamp,
-            likes: post.likes || 0,
-            commentCount: (mockComments[post.id] || []).length,
-            comments: []
-        }));
+        const result = await executeSnowflakeSQL(sql);
 
-        return {
-            success: true,
-            posts,
-            message: `Loaded ${posts.length} posts from API storage`
-        };
+        if (result.success && result.data) {
+            const posts = result.data.map(row => ({
+                id: row.ID,
+                type: row.POST_TYPE,
+                metricValue: row.METRIC_VALUE,
+                metricLabel: row.METRIC_LABEL,
+                content: row.CONTENT,
+                author: row.AUTHOR,
+                timestamp: parseInt(row.TIMESTAMP_MS),
+                likes: parseInt(row.LIKES) || 0,
+                commentCount: 0, // Will be populated by separate query if needed
+                comments: []
+            }));
+
+            console.log(`✅ Loaded ${posts.length} posts from Snowflake`);
+
+            return {
+                success: true,
+                posts,
+                message: `Loaded ${posts.length} posts from Snowflake`
+            };
+        } else {
+            console.log('📄 No posts found in Snowflake, returning empty array');
+            return {
+                success: true,
+                posts: [],
+                message: 'No posts found in Snowflake'
+            };
+        }
 
     } catch (error) {
-        console.error('❌ Error loading posts:', error);
+        console.error('❌ Error loading posts from Snowflake:', error);
         return { success: false, error: error.message, posts: [] };
     }
 }
 
-// Delete post from mock database
+// Delete post from Snowflake database
 async function deletePost(postId) {
     try {
-        // Remove from mock storage
-        const index = mockPosts.findIndex(p => p.id === postId);
-        if (index >= 0) {
-            mockPosts.splice(index, 1);
+        const deletePostSQL = `DELETE FROM ${snowflakeConfig.database}.${snowflakeConfig.schema}.POSTS WHERE ID = '${postId}'`;
+        const deleteCommentsSQL = `DELETE FROM ${snowflakeConfig.database}.${snowflakeConfig.schema}.COMMENTS WHERE POST_ID = '${postId}'`;
+
+        // Execute both deletions
+        const postResult = await executeSnowflakeSQL(deletePostSQL);
+        const commentsResult = await executeSnowflakeSQL(deleteCommentsSQL);
+
+        if (postResult.success) {
+            console.log(`✅ Post ${postId} deleted from Snowflake successfully`);
+            return { success: true, message: 'Post deleted from Snowflake automatically!' };
+        } else {
+            console.error(`❌ Failed to delete post ${postId}:`, postResult.error);
+            return { success: false, error: postResult.error };
         }
 
-        // Remove comments
-        delete mockComments[postId];
-
-        // Generate SQL for Snowflake
-        const sql = `DELETE FROM TABLEAU_EXTENSIONS.COMMENTS_APP.POSTS WHERE ID = '${postId}';
-DELETE FROM TABLEAU_EXTENSIONS.COMMENTS_APP.COMMENTS WHERE POST_ID = '${postId}';`;
-
-        console.log('📋 SNOWFLAKE DELETE SQL:', sql);
-
-        return { success: true, message: 'Post deleted automatically!', sql };
-
     } catch (error) {
-        console.error('❌ Error deleting post:', error);
+        console.error('❌ Error deleting post from Snowflake:', error);
         return { success: false, error: error.message };
     }
 }
 
-// Save comment to mock database
+// Save comment to Snowflake database
 async function saveComment(postId, comment) {
     try {
-        // Store in mock database
-        if (!mockComments[postId]) {
-            mockComments[postId] = [];
-        }
-        mockComments[postId].push(comment);
-
-        // Generate SQL for Snowflake
-        const sql = `INSERT INTO TABLEAU_EXTENSIONS.COMMENTS_APP.COMMENTS
+        const sql = `INSERT INTO ${snowflakeConfig.database}.${snowflakeConfig.schema}.COMMENTS
 (ID, POST_ID, AUTHOR, CONTENT, TIMESTAMP_MS)
 VALUES (
     '${String(comment.id || '').replace(/'/g, "''")}',
@@ -217,28 +217,128 @@ VALUES (
     ${parseInt(comment.timestamp) || Date.now()}
 );`;
 
-        console.log('📋 SNOWFLAKE COMMENT SQL:', sql);
+        const result = await executeSnowflakeSQL(sql);
 
-        return { success: true, message: 'Comment saved automatically!', sql };
+        if (result.success) {
+            console.log(`✅ Comment saved to Snowflake for post ${postId}`);
+            return { success: true, message: 'Comment saved to Snowflake automatically!' };
+        } else {
+            console.error('❌ Failed to save comment:', result.error);
+            return { success: false, error: result.error };
+        }
 
     } catch (error) {
-        console.error('❌ Error saving comment:', error);
+        console.error('❌ Error saving comment to Snowflake:', error);
         return { success: false, error: error.message };
     }
 }
 
-// Load comments from mock database
+// Load comments from Snowflake database
 async function loadComments(postId) {
     try {
-        const comments = mockComments[postId] || [];
-        return {
-            success: true,
-            comments,
-            message: `Loaded ${comments.length} comments`
-        };
+        const sql = `SELECT * FROM ${snowflakeConfig.database}.${snowflakeConfig.schema}.COMMENTS WHERE POST_ID = '${postId}' ORDER BY TIMESTAMP_MS ASC`;
+
+        const result = await executeSnowflakeSQL(sql);
+
+        if (result.success && result.data) {
+            const comments = result.data.map(row => ({
+                id: row.ID,
+                author: row.AUTHOR,
+                content: row.CONTENT,
+                timestamp: parseInt(row.TIMESTAMP_MS)
+            }));
+
+            console.log(`✅ Loaded ${comments.length} comments for post ${postId}`);
+
+            return {
+                success: true,
+                comments,
+                message: `Loaded ${comments.length} comments from Snowflake`
+            };
+        } else {
+            return {
+                success: true,
+                comments: [],
+                message: 'No comments found in Snowflake'
+            };
+        }
 
     } catch (error) {
-        console.error('❌ Error loading comments:', error);
+        console.error('❌ Error loading comments from Snowflake:', error);
         return { success: false, error: error.message, comments: [] };
+    }
+}
+
+// Execute SQL in Snowflake using REST API
+async function executeSnowflakeSQL(sqlStatement) {
+    try {
+        const loginUrl = `https://${snowflakeConfig.account}/session/v1/login-request`;
+
+        // First, authenticate to get session token
+        const authResponse = await fetch(loginUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify({
+                data: {
+                    ACCOUNT_NAME: snowflakeConfig.account.split('.')[0],
+                    LOGIN_NAME: snowflakeConfig.username,
+                    PASSWORD: snowflakeConfig.password
+                }
+            })
+        });
+
+        if (!authResponse.ok) {
+            throw new Error(`Authentication failed: ${authResponse.status} ${authResponse.statusText}`);
+        }
+
+        const authData = await authResponse.json();
+        const sessionToken = authData.data.token;
+
+        // Execute SQL statement
+        const executeUrl = `https://${snowflakeConfig.account}/queries/v1/query-request`;
+
+        const executeResponse = await fetch(executeUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'Authorization': `Snowflake Token="${sessionToken}"`
+            },
+            body: JSON.stringify({
+                statement: sqlStatement,
+                timeout: 60,
+                database: snowflakeConfig.database,
+                schema: snowflakeConfig.schema
+            })
+        });
+
+        if (!executeResponse.ok) {
+            throw new Error(`SQL execution failed: ${executeResponse.status} ${executeResponse.statusText}`);
+        }
+
+        const executeData = await executeResponse.json();
+
+        if (executeData.success) {
+            return {
+                success: true,
+                data: executeData.data,
+                message: 'SQL executed successfully'
+            };
+        } else {
+            return {
+                success: false,
+                error: executeData.message || 'SQL execution failed'
+            };
+        }
+
+    } catch (error) {
+        console.error('❌ Snowflake SQL execution error:', error);
+        return {
+            success: false,
+            error: error.message
+        };
     }
 }
