@@ -3,14 +3,14 @@
 
 const snowflake = require('snowflake-sdk');
 
-// Snowflake connection configuration
+// Snowflake connection configuration - Updated with correct credentials
 const connectionConfig = {
     account: 'ZDDMCAD-FGC62251',
-    username: 'ARUNCHANDAR',
-    password: 'Password@123',
+    username: 'ARUNCHANDAR99',
+    password: 'Arunchandar@99',
     database: 'TABLEAU_EXTENSIONS',
     schema: 'COMMENTS_APP',
-    warehouse: 'COMPUTE_WH',
+    warehouse: 'COMPUTE_WH', // Will use default if none selected
     role: 'ACCOUNTADMIN'
 };
 
@@ -53,57 +53,58 @@ async function getConnection() {
 
 // Execute SQL with proper error handling and fallback
 async function executeSQL(sqlText, binds = []) {
+    // Always try to connect first (don't rely on cached state)
     try {
-        // Try to execute in Snowflake if available
-        if (isSnowflakeAvailable !== false) {
-            const conn = await getConnection();
+        console.log('🔄 Attempting Snowflake connection...');
+        const conn = await getConnection();
 
-            return new Promise((resolve, reject) => {
-                conn.execute({
-                    sqlText: sqlText,
-                    binds: binds,
-                    complete: (err, stmt, rows) => {
-                        if (err) {
-                            console.error('❌ SQL execution error:', err);
-                            reject(err);
-                        } else {
-                            console.log('✅ SQL executed successfully in Snowflake');
-                            resolve({ success: true, data: rows, executed: true });
-                        }
+        return new Promise((resolve, reject) => {
+            conn.execute({
+                sqlText: sqlText,
+                binds: binds,
+                complete: (err, stmt, rows) => {
+                    if (err) {
+                        console.error('❌ SQL execution error:', err.message);
+                        isSnowflakeAvailable = false;
+                        reject(err);
+                    } else {
+                        console.log('✅ SQL executed successfully in Snowflake');
+                        isSnowflakeAvailable = true;
+                        resolve({ success: true, data: rows, executed: true });
                     }
-                });
+                }
+            });
+        });
+
+    } catch (error) {
+        console.error('❌ Snowflake connection failed, using fallback:', error.message);
+        isSnowflakeAvailable = false;
+
+        // Fallback: Store SQL for manual execution
+        console.log('📝 Storing SQL for manual execution:', sqlText);
+        let sqlWithBinds = sqlText;
+        if (binds.length > 0) {
+            let bindIndex = 0;
+            sqlWithBinds = sqlText.replace(/\?/g, () => {
+                const value = binds[bindIndex++];
+                return typeof value === 'string' ? `'${value.replace(/'/g, "''")}'` : value;
             });
         }
 
-    } catch (error) {
-        console.error('❌ Snowflake execution failed, using fallback:', error.message);
-        isSnowflakeAvailable = false;
-    }
-
-    // Fallback: Store SQL for manual execution
-    console.log('📝 Storing SQL for manual execution:', sqlText);
-    let sqlWithBinds = sqlText;
-    if (binds.length > 0) {
-        let bindIndex = 0;
-        sqlWithBinds = sqlText.replace(/\?/g, () => {
-            const value = binds[bindIndex++];
-            return typeof value === 'string' ? `'${value.replace(/'/g, "''")}'` : value;
+        sqlStatements.push({
+            sql: sqlWithBinds,
+            timestamp: new Date().toISOString(),
+            binds: binds
         });
+
+        return {
+            success: true,
+            data: [],
+            executed: false,
+            queued: true,
+            message: 'SQL queued for manual execution'
+        };
     }
-
-    sqlStatements.push({
-        sql: sqlWithBinds,
-        timestamp: new Date().toISOString(),
-        binds: binds
-    });
-
-    return {
-        success: true,
-        data: [],
-        executed: false,
-        queued: true,
-        message: 'SQL queued for manual execution'
-    };
 }
 
 // API Handler - Professional REST API
@@ -161,6 +162,10 @@ export default async function handler(req, res) {
 
             case 'health':
                 result = await healthCheck();
+                break;
+
+            case 'testConnection':
+                result = await testConnectionDetailed();
                 break;
 
             case 'getSQL':
@@ -526,6 +531,67 @@ async function healthCheck() {
 // Utility function to generate unique IDs
 function generateId() {
     return Date.now().toString(36) + Math.random().toString(36).substr(2, 9);
+}
+
+// Detailed connection test to show exact error
+async function testConnectionDetailed() {
+    try {
+        console.log('🔍 Testing Snowflake connection with detailed logging...');
+        console.log('📋 Connection Config:', {
+            account: connectionConfig.account,
+            username: connectionConfig.username,
+            database: connectionConfig.database,
+            schema: connectionConfig.schema,
+            warehouse: connectionConfig.warehouse,
+            role: connectionConfig.role
+        });
+
+        const conn = await getConnection();
+        console.log('✅ Connection established, testing SQL execution...');
+
+        return new Promise((resolve, reject) => {
+            conn.execute({
+                sqlText: 'SELECT 1 as test_value',
+                complete: (err, stmt, rows) => {
+                    if (err) {
+                        console.error('❌ SQL execution failed:', err);
+                        resolve({
+                            success: false,
+                            connectionEstablished: true,
+                            sqlExecutionFailed: true,
+                            error: err.message,
+                            errorCode: err.code,
+                            sqlState: err.sqlState
+                        });
+                    } else {
+                        console.log('✅ SQL executed successfully:', rows);
+                        resolve({
+                            success: true,
+                            connectionEstablished: true,
+                            sqlExecutionSuccessful: true,
+                            testResult: rows[0]?.TEST_VALUE || 'unknown',
+                            message: 'Full connection and SQL execution successful'
+                        });
+                    }
+                }
+            });
+        });
+
+    } catch (error) {
+        console.error('❌ Connection failed:', error);
+        return {
+            success: false,
+            connectionEstablished: false,
+            error: error.message,
+            errorCode: error.code || 'unknown',
+            configUsed: {
+                account: connectionConfig.account,
+                username: connectionConfig.username,
+                database: connectionConfig.database,
+                schema: connectionConfig.schema
+            }
+        };
+    }
 }
 
 // Generate batch SQL for manual execution
