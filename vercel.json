@@ -1,0 +1,14 @@
+{
+  "version": 2,
+  "functions": {
+    "api/snowflake.js": {
+      "runtime": "@vercel/node@2"
+    }
+  },
+  "routes": [
+    {
+      "src": "/((?!api).*)$",
+      "dest": "/$1"
+    }
+  ]
+}
