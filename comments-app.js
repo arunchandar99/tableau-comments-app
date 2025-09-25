@@ -10,11 +10,16 @@ async function initializeApp() {
         await tableau.extensions.initializeAsync();
         console.log('Comments App initialized successfully');
 
+        // Show visual debug info
+        showDebugStatus('Initializing Snowflake API...');
+
         // Initialize Snowflake API
         await snowflakeAPI.initialize();
+        showDebugStatus('Loading posts from storage...');
 
         // Load existing posts from Snowflake (with localStorage fallback)
         await loadPostsFromStorage();
+        showDebugStatus(`Loaded ${posts.length} posts`);
 
         // Setup event listeners
         setupEventListeners();
@@ -22,6 +27,7 @@ async function initializeApp() {
         // Apply filters to populate filteredPosts array
         console.log('🔍 Applying initial filters...');
         applyFilters();
+        showDebugStatus(`Filtered to ${filteredPosts.length} posts`);
 
         // Initial render
         console.log('🎨 Starting initial render with', posts.length, 'posts');
@@ -29,8 +35,14 @@ async function initializeApp() {
         updateResultsCounter();
         console.log('✅ App initialization complete');
 
+        // Hide debug info after successful load
+        setTimeout(() => {
+            hideDebugStatus();
+        }, 3000);
+
     } catch (error) {
         console.error('Failed to initialize Comments App:', error);
+        showDebugStatus('ERROR: Failed to initialize - ' + error.message);
     }
 }
 
@@ -88,19 +100,23 @@ async function loadPostsFromStorage() {
 
         if (posts.length === 0) {
             console.log('⚠️ No posts found in Snowflake, loading sample data for display');
+            showDebugStatus('No posts in Snowflake, loading samples');
             // Add some sample data for MVP (local display only, not saved to database)
             posts = getSamplePosts();
             // Note: Don't save sample data to Snowflake - only save actual user posts
         }
     } catch (error) {
         console.error('❌ Error loading posts from Snowflake, using localStorage fallback:', error);
+        showDebugStatus('Snowflake failed, trying localStorage');
         const storedPosts = localStorage.getItem('commentsApp_posts');
         if (storedPosts) {
             posts = JSON.parse(storedPosts);
             console.log('✅ Loaded posts from localStorage:', posts.length, 'posts');
+            showDebugStatus(`Loaded ${posts.length} posts from localStorage`);
         } else {
             posts = getSamplePosts();
             console.log('✅ Loading sample posts for MVP:', posts.length, 'posts');
+            showDebugStatus(`Loading ${posts.length} sample posts`);
             localStorage.setItem('commentsApp_posts', JSON.stringify(posts));
         }
     }
@@ -703,6 +719,42 @@ function updateResultsCounter() {
     const counter = document.getElementById('resultsCounter');
     const count = filteredPosts.length;
     counter.textContent = `Showing ${count} post${count !== 1 ? 's' : ''}`;
+}
+
+// Debug Functions for Tableau Testing
+function showDebugStatus(message) {
+    let debugPanel = document.getElementById('tableau-debug-panel');
+    if (!debugPanel) {
+        debugPanel = document.createElement('div');
+        debugPanel.id = 'tableau-debug-panel';
+        debugPanel.style.cssText = `
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            background: #333;
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            font-family: monospace;
+            font-size: 12px;
+            z-index: 10001;
+            max-width: 300px;
+            border: 2px solid #ff6b00;
+        `;
+        document.body.appendChild(debugPanel);
+    }
+    debugPanel.innerHTML = `
+        <div style="color: #ff6b00; font-weight: bold;">TABLEAU DEBUG</div>
+        <div>${message}</div>
+        <div style="font-size: 10px; color: #ccc;">${new Date().toLocaleTimeString()}</div>
+    `;
+}
+
+function hideDebugStatus() {
+    const debugPanel = document.getElementById('tableau-debug-panel');
+    if (debugPanel) {
+        debugPanel.remove();
+    }
 }
 
 // Utility Functions
