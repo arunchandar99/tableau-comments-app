@@ -98,6 +98,35 @@
         </div>
     </div>
 
+    <!-- Status Panel -->
+    <div class="status-panel" id="statusPanel">
+        <div class="status-header">
+            <div class="status-title">
+                <i class="fas fa-info-circle"></i>
+                System Status
+            </div>
+            <div class="status-actions">
+                <button class="status-toggle" id="statusToggle" title="Minimize/Maximize">
+                    <i class="fas fa-minus"></i>
+                </button>
+            </div>
+        </div>
+        <div class="status-content" id="statusContent">
+            <div class="status-row">
+                <span class="status-label">Connection:</span>
+                <span class="status-value" id="connectionStatus">Connecting...</span>
+            </div>
+            <div class="status-row">
+                <span class="status-label">Posts Loaded:</span>
+                <span class="status-value" id="postsStatus">0</span>
+            </div>
+            <div class="status-row">
+                <span class="status-label">Last Action:</span>
+                <span class="status-value" id="lastAction">App initializing...</span>
+            </div>
+        </div>
+    </div>
+
     <!-- New Post Modal -->
     <div class="modal-overlay" id="modalOverlay">
         <div class="modal-container">

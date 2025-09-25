@@ -10,16 +10,18 @@ async function initializeApp() {
         await tableau.extensions.initializeAsync();
         console.log('Comments App initialized successfully');
 
-        // Show visual debug info
-        showDebugStatus('Initializing Snowflake API...');
-
         // Initialize Snowflake API
+        updateConnectionStatus('Connecting to Snowflake...', 'info');
+        updateStatus('Initializing Snowflake API...');
+
         await snowflakeAPI.initialize();
-        showDebugStatus('Loading posts from storage...');
+        updateConnectionStatus('Connected to Snowflake', 'info');
+        updateStatus('Loading posts from storage...');
 
         // Load existing posts from Snowflake (with localStorage fallback)
         await loadPostsFromStorage();
-        showDebugStatus(`Loaded ${posts.length} posts`);
+        updatePostsCount(posts.length);
+        updateStatus(`Loaded ${posts.length} posts from database`);
 
         // Setup event listeners
         setupEventListeners();
@@ -27,7 +29,7 @@ async function initializeApp() {
         // Apply filters to populate filteredPosts array
         console.log('🔍 Applying initial filters...');
         applyFilters();
-        showDebugStatus(`Filtered to ${filteredPosts.length} posts`);
+        updateStatus(`Filtered to ${filteredPosts.length} posts`);
 
         // Initial render
         console.log('🎨 Starting initial render with', posts.length, 'posts');
@@ -35,14 +37,12 @@ async function initializeApp() {
         updateResultsCounter();
         console.log('✅ App initialization complete');
 
-        // Hide debug info after successful load
-        setTimeout(() => {
-            hideDebugStatus();
-        }, 3000);
+        updateStatus('App ready - all systems operational', 'info');
 
     } catch (error) {
         console.error('Failed to initialize Comments App:', error);
-        showDebugStatus('ERROR: Failed to initialize - ' + error.message);
+        updateConnectionStatus('Connection Failed', 'error');
+        updateStatus('ERROR: Failed to initialize - ' + error.message, 'error');
     }
 }
 
@@ -63,10 +63,25 @@ function setupEventListeners() {
     setupRichTextEditor();
 
     // Filters
-    document.getElementById('monthFilter').addEventListener('change', applyFilters);
-    document.getElementById('yearFilter').addEventListener('change', applyFilters);
-    document.getElementById('typeFilter').addEventListener('change', applyFilters);
-    document.getElementById('clearFiltersBtn').addEventListener('click', clearFilters);
+    document.getElementById('monthFilter').addEventListener('change', () => {
+        updateStatus('Applying month filter...');
+        applyFilters();
+    });
+    document.getElementById('yearFilter').addEventListener('change', () => {
+        updateStatus('Applying year filter...');
+        applyFilters();
+    });
+    document.getElementById('typeFilter').addEventListener('change', () => {
+        updateStatus('Applying type filter...');
+        applyFilters();
+    });
+    document.getElementById('clearFiltersBtn').addEventListener('click', () => {
+        updateStatus('Clearing all filters...');
+        clearFilters();
+    });
+
+    // Status panel toggle
+    document.getElementById('statusToggle').addEventListener('click', toggleStatusPanel);
 }
 
 // Post Management
@@ -86,7 +101,10 @@ function createPost(postData) {
     posts.unshift(post); // Add to beginning
 
     // Save only the new post to Snowflake
+    updateStatus('Saving new post to database...');
     saveNewPostToSnowflake(post);
+    updatePostsCount(posts.length);
+    updateStatus('New post created successfully');
     return post;
 }
 
@@ -586,6 +604,7 @@ function submitComment() {
     post.comments.push(newComment);
 
     // Save only the new comment to Snowflake (not all posts)
+    updateStatus('Saving comment to database...');
     saveCommentToSnowflake(currentPostId, newComment);
 
     // Re-render comments
@@ -736,6 +755,7 @@ function applyFilters() {
 
     renderFeed();
     updateResultsCounter();
+    updateStatus(`Showing ${filteredPosts.length} posts`);
 }
 
 function clearFilters() {
@@ -751,39 +771,48 @@ function updateResultsCounter() {
     counter.textContent = `Showing ${count} post${count !== 1 ? 's' : ''}`;
 }
 
-// Debug Functions for Tableau Testing
-function showDebugStatus(message) {
-    let debugPanel = document.getElementById('tableau-debug-panel');
-    if (!debugPanel) {
-        debugPanel = document.createElement('div');
-        debugPanel.id = 'tableau-debug-panel';
-        debugPanel.style.cssText = `
-            position: fixed;
-            top: 10px;
-            left: 10px;
-            background: #333;
-            color: white;
-            padding: 10px;
-            border-radius: 5px;
-            font-family: monospace;
-            font-size: 12px;
-            z-index: 10001;
-            max-width: 300px;
-            border: 2px solid #ff6b00;
-        `;
-        document.body.appendChild(debugPanel);
+// Status Panel Functions
+function updateStatus(action, type = 'info') {
+    const lastActionElement = document.getElementById('lastAction');
+    if (lastActionElement) {
+        lastActionElement.textContent = action;
+        lastActionElement.className = `status-value ${type}`;
     }
-    debugPanel.innerHTML = `
-        <div style="color: #ff6b00; font-weight: bold;">TABLEAU DEBUG</div>
-        <div>${message}</div>
-        <div style="font-size: 10px; color: #ccc;">${new Date().toLocaleTimeString()}</div>
-    `;
+}
+
+function updateConnectionStatus(status, type = 'info') {
+    const connectionElement = document.getElementById('connectionStatus');
+    if (connectionElement) {
+        connectionElement.textContent = status;
+        connectionElement.className = `status-value ${type}`;
+    }
+}
+
+function updatePostsCount(count) {
+    const postsElement = document.getElementById('postsStatus');
+    if (postsElement) {
+        postsElement.textContent = count.toString();
+    }
+}
+
+function showDebugStatus(message) {
+    updateStatus(message);
 }
 
 function hideDebugStatus() {
-    const debugPanel = document.getElementById('tableau-debug-panel');
-    if (debugPanel) {
-        debugPanel.remove();
+    // Keep the status panel visible
+}
+
+function toggleStatusPanel() {
+    const statusContent = document.getElementById('statusContent');
+    const statusToggle = document.getElementById('statusToggle');
+
+    if (statusContent.classList.contains('minimized')) {
+        statusContent.classList.remove('minimized');
+        statusToggle.innerHTML = '<i class="fas fa-minus"></i>';
+    } else {
+        statusContent.classList.add('minimized');
+        statusToggle.innerHTML = '<i class="fas fa-plus"></i>';
     }
 }
 
