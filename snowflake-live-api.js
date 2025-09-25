@@ -2,7 +2,7 @@
 class LiveSnowflakeAPI {
     constructor() {
         // This will be your deployed server URL
-        this.baseURL = 'https://comments-mxy519560-arun-chandars-projects.vercel.app/api/snowflake'; // SQL generation API
+        this.baseURL = 'https://comments-9i1zzpjme-arun-chandars-projects.vercel.app/api/snowflake'; // Hybrid Snowflake API with fallback
         this.isConnected = false;
         this.createStatusPanel();
     }
@@ -111,26 +111,32 @@ class LiveSnowflakeAPI {
 
     async initialize() {
         try {
-            console.log('🚀 Initializing Live Snowflake connection...');
+            console.log('🚀 Initializing Professional Snowflake API...');
             console.log('🔗 API URL:', this.baseURL);
 
-            // Test connection by attempting to load posts
-            const result = await this.apiCall('loadPosts');
-            console.log('✅ API Response:', result);
+            // Test connection with health check
+            const result = await this.apiCall('health');
+            console.log('✅ Health Check Response:', result);
 
-            this.isConnected = true;
-            this.updateStatus(true, 'Live connection established');
-            console.log('✅ Live Snowflake API connected successfully!');
+            this.isConnected = result.success;
 
-            // Show success notification
-            if (typeof showNotification === 'function') {
-                showNotification('🚀 Live Snowflake connection established!');
+            if (this.isConnected) {
+                this.updateStatus(true, 'Direct Snowflake connection established');
+                console.log('✅ Professional Snowflake API connected successfully!');
+
+                // Show success notification
+                if (typeof showNotification === 'function') {
+                    showNotification('🚀 Professional Snowflake API connected - automatic writeback enabled!');
+                }
+            } else {
+                this.updateStatus(false, result.error || 'Health check failed');
+                console.log('⚠️ Snowflake health check failed:', result.error);
             }
 
-            return true;
+            return this.isConnected;
 
         } catch (error) {
-            console.error('❌ Failed to connect to live API:', error);
+            console.error('❌ Failed to connect to Snowflake API:', error);
             console.error('❌ Full error details:', error.message);
             console.error('❌ API URL being used:', this.baseURL);
 
@@ -139,7 +145,7 @@ class LiveSnowflakeAPI {
 
             // Show error notification with instructions
             if (typeof showNotification === 'function') {
-                showNotification('⚠️ API Connection Failed - Check console for details');
+                showNotification('⚠️ Snowflake API Connection Failed - Check console for details');
             }
 
             return false;
@@ -163,23 +169,33 @@ class LiveSnowflakeAPI {
 
             console.log('✅ Posts saved successfully to Snowflake!');
 
-            // Show SQL generation status
-            if (result.queued) {
-                // Show the queued status in debug panel
+            // Show save results with hybrid approach
+            if (result.isSnowflakeAvailable !== undefined) {
                 const debugElement = document.getElementById('debug-info');
                 if (debugElement) {
-                    debugElement.innerHTML = `
-                        ✅ API: ${this.baseURL}<br>
-                        📋 ${result.pendingCount || 0} SQL statements queued - <button onclick="window.snowflakeAPI.getSyncSQL()" style="font-size: 10px; padding: 2px 4px; background: #ff9500; color: white; border: none; border-radius: 2px; cursor: pointer;">Get SQL</button>
-                    `;
+                    if (result.isSnowflakeAvailable) {
+                        debugElement.innerHTML = `
+                            ✅ API: ${this.baseURL}<br>
+                            🚀 ${result.executedCount}/${posts.length} posts saved directly to Snowflake
+                        `;
+                    } else {
+                        debugElement.innerHTML = `
+                            ✅ API: ${this.baseURL}<br>
+                            📋 ${result.queuedCount}/${posts.length} posts queued - <button onclick="window.snowflakeAPI.getSQL()" style="font-size: 10px; padding: 2px 4px; background: #ff9500; color: white; border: none; border-radius: 2px; cursor: pointer;">Get SQL</button>
+                        `;
+                    }
                 }
 
-                // Show notification with SQL info
+                // Show notification based on execution mode
                 if (typeof showNotification === 'function') {
-                    showNotification(`✅ ${posts.length} post(s) queued! Click "Get SQL" to sync to Snowflake.`);
+                    if (result.isSnowflakeAvailable) {
+                        showNotification(`🚀 ${result.executedCount} post(s) automatically saved to Snowflake!`);
+                    } else {
+                        showNotification(`📋 ${result.queuedCount} post(s) queued for manual sync - click "Get SQL"`);
+                    }
                 }
             } else {
-                // Show success notification
+                // Fallback notification
                 if (typeof showNotification === 'function') {
                     showNotification(`✅ ${posts.length} post(s) processed!`);
                 }
@@ -297,11 +313,11 @@ class LiveSnowflakeAPI {
         }
     }
 
-    async getSyncSQL() {
+    async getSQL() {
         try {
             console.log('📋 Getting sync SQL from API...');
 
-            const result = await this.apiCall('getSyncSQL');
+            const result = await this.apiCall('getSQL');
 
             if (result.success && result.sql) {
                 // Copy to clipboard
@@ -364,7 +380,8 @@ class LiveSnowflakeAPI {
                         <body>
                             <div class="header">
                                 <h2>🗲 Snowflake Sync SQL</h2>
-                                <p>Execute this SQL in your Snowflake worksheet to sync ${result.pendingCount} statements</p>
+                                <p>Execute this SQL in your Snowflake worksheet to sync ${result.statements} statements</p>
+                                <p><strong>Status:</strong> ${result.isSnowflakeAvailable ? 'Direct connection failed' : 'Using fallback mode'}</p>
                             </div>
 
                             <div class="instructions">
@@ -389,7 +406,7 @@ class LiveSnowflakeAPI {
 
                 // Show notification
                 if (typeof showNotification === 'function') {
-                    showNotification(`📋 SQL opened in new window (${result.pendingCount} statements) - Copy and run in Snowflake!`);
+                    showNotification(`📋 SQL opened in new window (${result.statements} statements) - Copy and run in Snowflake!`);
                 }
 
                 return true;
