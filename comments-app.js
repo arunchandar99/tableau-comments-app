@@ -19,9 +19,15 @@ async function initializeApp() {
         // Setup event listeners
         setupEventListeners();
 
+        // Apply filters to populate filteredPosts array
+        console.log('🔍 Applying initial filters...');
+        applyFilters();
+
         // Initial render
+        console.log('🎨 Starting initial render with', posts.length, 'posts');
         renderFeed();
         updateResultsCounter();
+        console.log('✅ App initialization complete');
 
     } catch (error) {
         console.error('Failed to initialize Comments App:', error);
@@ -75,20 +81,26 @@ function createPost(postData) {
 // Storage Functions - Now uses Snowflake with localStorage fallback
 async function loadPostsFromStorage() {
     try {
+        console.log('🔄 Loading posts from Snowflake...');
         posts = await snowflakeAPI.loadPosts();
+        console.log('✅ Loaded posts from Snowflake:', posts.length, 'posts');
+        console.log('Posts data:', posts);
 
         if (posts.length === 0) {
+            console.log('⚠️ No posts found in Snowflake, loading sample data for display');
             // Add some sample data for MVP (local display only, not saved to database)
             posts = getSamplePosts();
             // Note: Don't save sample data to Snowflake - only save actual user posts
         }
     } catch (error) {
-        console.error('Error loading posts from Snowflake, using localStorage fallback:', error);
+        console.error('❌ Error loading posts from Snowflake, using localStorage fallback:', error);
         const storedPosts = localStorage.getItem('commentsApp_posts');
         if (storedPosts) {
             posts = JSON.parse(storedPosts);
+            console.log('✅ Loaded posts from localStorage:', posts.length, 'posts');
         } else {
             posts = getSamplePosts();
+            console.log('✅ Loading sample posts for MVP:', posts.length, 'posts');
             localStorage.setItem('commentsApp_posts', JSON.stringify(posts));
         }
     }
@@ -234,6 +246,8 @@ function setupRichTextEditor() {
 
 // Feed Rendering
 function renderFeed() {
+    console.log('🎨 renderFeed called - posts:', posts.length, 'filteredPosts:', filteredPosts.length);
+
     const feedContainer = document.getElementById('feedContainer');
     const loadingSpinner = document.getElementById('loadingSpinner');
     const emptyState = document.getElementById('emptyState');
@@ -247,9 +261,13 @@ function renderFeed() {
     setTimeout(() => {
         loadingSpinner.style.display = 'none';
 
+        console.log('🎨 Rendering feed - filteredPosts length:', filteredPosts.length);
+
         if (filteredPosts.length === 0) {
+            console.log('📭 No filtered posts, showing empty state');
             emptyState.style.display = 'flex';
         } else {
+            console.log('✅ Rendering', filteredPosts.length, 'posts to feed');
             feedContainer.innerHTML = filteredPosts.map(post => renderPost(post)).join('');
         }
     }, 300);
@@ -741,10 +759,6 @@ function showNotification(message) {
 // Initialize when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
     initializeApp();
-    // Initial filter application
-    setTimeout(() => {
-        applyFilters();
-    }, 100);
 });
 
 // Add notification animation to CSS
