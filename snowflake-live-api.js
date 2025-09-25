@@ -2,7 +2,7 @@
 class LiveSnowflakeAPI {
     constructor() {
         // This will be your deployed server URL
-        this.baseURL = 'https://comments-qt39brf22-arun-chandars-projects.vercel.app/api'; // Replace with actual deployed URL
+        this.baseURL = 'https://comments-qt39brf22-arun-chandars-projects.vercel.app/api/snowflake'; // Replace with actual deployed URL
         this.isConnected = false;
         this.createStatusPanel();
     }
@@ -102,9 +102,11 @@ class LiveSnowflakeAPI {
     async initialize() {
         try {
             console.log('🚀 Initializing Live Snowflake connection...');
+            console.log('🔗 API URL:', this.baseURL);
 
             // Test connection by attempting to load posts
-            await this.apiCall('loadPosts');
+            const result = await this.apiCall('loadPosts');
+            console.log('✅ API Response:', result);
 
             this.isConnected = true;
             this.updateStatus(true, 'Live connection established');
@@ -119,12 +121,15 @@ class LiveSnowflakeAPI {
 
         } catch (error) {
             console.error('❌ Failed to connect to live API:', error);
+            console.error('❌ Full error details:', error.message);
+            console.error('❌ API URL being used:', this.baseURL);
+
             this.isConnected = false;
-            this.updateStatus(false, `Error: ${error.message}`);
+            this.updateStatus(false, `Connection Error: ${error.message}`);
 
             // Show error notification with instructions
             if (typeof showNotification === 'function') {
-                showNotification('⚠️ Server not deployed yet. Deploy to Vercel first!');
+                showNotification('⚠️ API Connection Failed - Check console for details');
             }
 
             return false;
