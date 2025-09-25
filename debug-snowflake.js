@@ -100,11 +100,29 @@ class DebugSnowflakeAPI {
 
     async initialize() {
         this.logSQL('-- Snowflake Debug API initialized', 'INIT');
+        console.log('🐛 DebugSnowflakeAPI initialized successfully');
+
+        // Show a startup notification
+        setTimeout(() => {
+            const sqlOutput = document.getElementById('sql-output');
+            if (sqlOutput) {
+                sqlOutput.innerHTML += `
+                    <div style="margin-bottom: 10px; border: 2px solid #4CAF50; background: #E8F5E8; padding: 8px; border-radius: 4px;">
+                        <strong>🟢 DEBUG MODE ACTIVE</strong><br>
+                        <em>Ready to capture SQL statements!</em><br>
+                        <small>Add a post to see SQL generation...</small>
+                    </div>
+                `;
+            }
+        }, 1000);
+
         return true;
     }
 
     async savePost(post) {
         try {
+            console.log('🐛 savePost called with:', post);
+
             const sql = `INSERT INTO ${this.config.database}.${this.config.schema}.POSTS
 (ID, POST_TYPE, METRIC_VALUE, METRIC_LABEL, CONTENT, AUTHOR, TIMESTAMP_MS, LIKES)
 VALUES (
@@ -120,13 +138,19 @@ VALUES (
 
             this.logSQL(sql, 'SAVE POST');
 
+            console.log('🐛 SQL logged to debug panel');
+
             // Show notification in the app
             if (typeof showNotification === 'function') {
-                showNotification('SQL generated! Check debug panel in top-right corner.');
+                showNotification('SQL generated! Check debug panel in bottom-right corner.');
+            } else {
+                // Fallback alert if showNotification doesn't exist
+                alert('SQL generated! Check debug panel in bottom-right corner.');
             }
 
             return true;
         } catch (error) {
+            console.error('🐛 Error in savePost:', error);
             this.logSQL(`ERROR: ${error.message}`, 'ERROR');
             return false;
         }
@@ -164,4 +188,22 @@ VALUES (
 const debugSnowflakeAPI = new DebugSnowflakeAPI();
 window.snowflakeAPI = debugSnowflakeAPI;
 
-console.log('🐛 Debug Snowflake API loaded - check top-right corner for SQL output!');
+console.log('🐛 Debug Snowflake API loaded - check bottom-right corner for SQL output!');
+console.log('🐛 API object:', window.snowflakeAPI);
+console.log('🐛 API savePost function:', window.snowflakeAPI.savePost);
+
+// Add a test function to the window for debugging
+window.testDebugAPI = function() {
+    const testPost = {
+        id: 'test-123',
+        type: 'Test',
+        metricValue: 'Test Value',
+        metricLabel: 'Test Label',
+        content: 'Test content',
+        author: 'Debug Test',
+        timestamp: Date.now(),
+        likes: 0
+    };
+    console.log('🧪 Testing debug API with:', testPost);
+    window.snowflakeAPI.savePost(testPost);
+};
