@@ -87,13 +87,25 @@ class DebugSnowflakeAPI {
         const sqlOutput = document.getElementById('sql-output');
 
         if (sqlOutput) {
-            sqlOutput.innerHTML += `
-                <div style="margin-bottom: 10px; border-bottom: 1px solid #eee; padding-bottom: 5px;">
-                    <strong>${timestamp}</strong><br>
-                    <em>${description}</em><br>
-                    <textarea readonly style="width: 100%; height: 60px; font-size: 9px;">${sql}</textarea>
+            // Create a clean SQL display with copy button
+            const sqlDiv = document.createElement('div');
+            sqlDiv.style.cssText = 'margin-bottom: 10px; border-bottom: 1px solid #eee; padding-bottom: 5px;';
+
+            sqlDiv.innerHTML = `
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <strong>${timestamp}</strong><br>
+                        <em>${description}</em>
+                    </div>
+                    <button onclick="navigator.clipboard.writeText(this.nextElementSibling.textContent); alert('SQL copied!')"
+                            style="font-size: 8px; padding: 2px 4px; background: #007acc; color: white; border: none; border-radius: 2px; cursor: pointer;">
+                        Copy SQL
+                    </button>
                 </div>
+                <pre style="background: #f8f8f8; padding: 5px; margin: 5px 0; font-family: monospace; font-size: 8px; white-space: pre-wrap; border: 1px solid #ddd; max-height: 100px; overflow-y: auto;">${sql}</pre>
             `;
+
+            sqlOutput.appendChild(sqlDiv);
             sqlOutput.scrollTop = sqlOutput.scrollHeight;
         }
 
@@ -132,6 +144,13 @@ class DebugSnowflakeAPI {
 
             // Generate SQL for each post
             for (const post of posts) {
+                // Clean the content for SQL
+                const cleanContent = post.content
+                    .replace(/'/g, "''")        // Escape single quotes
+                    .replace(/\n/g, ' ')        // Replace newlines with spaces
+                    .replace(/\r/g, '')         // Remove carriage returns
+                    .replace(/\t/g, ' ');       // Replace tabs with spaces
+
                 const sql = `INSERT INTO ${this.config.database}.${this.config.schema}.POSTS
 (ID, POST_TYPE, METRIC_VALUE, METRIC_LABEL, CONTENT, AUTHOR, TIMESTAMP_MS, LIKES)
 VALUES (
@@ -139,18 +158,11 @@ VALUES (
     '${post.type}',
     '${post.metricValue.replace(/'/g, "''")}',
     '${post.metricLabel.replace(/'/g, "''")}',
-    '${post.content.replace(/'/g, "''")}',
+    '${cleanContent}',
     '${post.author || 'Tableau User'}',
     ${post.timestamp},
     ${post.likes || 0}
-) ON CONFLICT (ID) DO UPDATE SET
-    POST_TYPE = excluded.POST_TYPE,
-    METRIC_VALUE = excluded.METRIC_VALUE,
-    METRIC_LABEL = excluded.METRIC_LABEL,
-    CONTENT = excluded.CONTENT,
-    AUTHOR = excluded.AUTHOR,
-    TIMESTAMP_MS = excluded.TIMESTAMP_MS,
-    LIKES = excluded.LIKES;`;
+);`;
 
                 this.logSQL(sql, `SAVE POST: ${post.metricLabel || post.id}`);
             }
