@@ -7,6 +7,7 @@ let filteredPosts = [];
 // Initialize the app
 async function initializeApp() {
     try {
+        window.appStartTime = Date.now();
         await tableau.extensions.initializeAsync();
         console.log('Comments App initialized successfully');
 
@@ -80,9 +81,9 @@ function setupEventListeners() {
         clearFilters();
     });
 
-    // Status panel toggle
-    document.getElementById('statusToggle').addEventListener('click', toggleStatusPanel);
-    document.querySelector('.status-header').addEventListener('click', toggleStatusPanel);
+    // Debug panel toggle
+    document.getElementById('statusIndicator').addEventListener('click', toggleDebugPanel);
+    document.getElementById('debugClose').addEventListener('click', hideDebugPanel);
 }
 
 // Post Management
@@ -756,6 +757,7 @@ function applyFilters() {
 
     renderFeed();
     updateResultsCounter();
+    updateFilteredPostsCount(filteredPosts.length);
     updateStatus(`Showing ${filteredPosts.length} posts`);
 }
 
@@ -772,25 +774,37 @@ function updateResultsCounter() {
     counter.textContent = `Showing ${count} post${count !== 1 ? 's' : ''}`;
 }
 
-// Compact Status Panel Functions
+// Status and Debug Panel Functions
 function updateStatus(message, type = 'info') {
-    const statusText = document.getElementById('statusText');
-    const statusIndicator = document.getElementById('statusIndicator');
+    const statusIcon = document.getElementById('statusIcon');
+    const lastAction = document.getElementById('lastAction');
+    const lastUpdate = document.getElementById('lastUpdate');
 
-    if (statusText) {
-        statusText.textContent = message;
+    if (statusIcon) {
+        statusIcon.className = `fas fa-circle ${type}`;
     }
 
-    if (statusIndicator) {
-        statusIndicator.className = `fas fa-circle ${type}`;
+    if (lastAction) {
+        lastAction.textContent = message;
+        lastAction.className = `debug-value ${type}`;
+    }
+
+    if (lastUpdate) {
+        lastUpdate.textContent = new Date().toLocaleTimeString();
     }
 }
 
 function updateConnectionStatus(status, type = 'info') {
     const connectionElement = document.getElementById('connectionStatus');
+    const apiEndpoint = document.getElementById('apiEndpoint');
+
     if (connectionElement) {
         connectionElement.textContent = status;
-        connectionElement.className = `status-value ${type}`;
+        connectionElement.className = `debug-value ${type}`;
+    }
+
+    if (apiEndpoint && window.snowflakeAPI) {
+        apiEndpoint.textContent = window.snowflakeAPI.baseURL || 'Not configured';
     }
 }
 
@@ -801,25 +815,54 @@ function updatePostsCount(count) {
     }
 }
 
+function updateFilteredPostsCount(count) {
+    const filteredPostsElement = document.getElementById('filteredPostsStatus');
+    if (filteredPostsElement) {
+        filteredPostsElement.textContent = count.toString();
+    }
+}
+
 function showDebugStatus(message) {
     updateStatus(message);
 }
 
 function hideDebugStatus() {
-    // Keep the status panel visible
+    // Keep the status indicator visible
 }
 
-function toggleStatusPanel() {
-    const statusContent = document.getElementById('statusContent');
-    const statusToggle = document.getElementById('statusToggle');
-
-    if (statusContent.classList.contains('minimized')) {
-        statusContent.classList.remove('minimized');
-        statusToggle.innerHTML = '<i class="fas fa-chevron-down"></i>';
+function toggleDebugPanel() {
+    const debugPanel = document.getElementById('debugPanel');
+    if (debugPanel.style.display === 'none') {
+        debugPanel.style.display = 'block';
+        // Update all values when panel opens
+        updateAllDebugInfo();
     } else {
-        statusContent.classList.add('minimized');
-        statusToggle.innerHTML = '<i class="fas fa-chevron-up"></i>';
+        debugPanel.style.display = 'none';
     }
+}
+
+function hideDebugPanel() {
+    const debugPanel = document.getElementById('debugPanel');
+    debugPanel.style.display = 'none';
+}
+
+function updateAllDebugInfo() {
+    // Update load time
+    const loadTime = document.getElementById('loadTime');
+    if (loadTime && window.appStartTime) {
+        const timeElapsed = Date.now() - window.appStartTime;
+        loadTime.textContent = `${timeElapsed}ms`;
+    }
+
+    // Update API endpoint
+    const apiEndpoint = document.getElementById('apiEndpoint');
+    if (apiEndpoint && window.snowflakeAPI) {
+        apiEndpoint.textContent = window.snowflakeAPI.baseURL || 'Not configured';
+    }
+
+    // Update posts counts
+    updatePostsCount(posts.length);
+    updateFilteredPostsCount(filteredPosts.length);
 }
 
 // Utility Functions

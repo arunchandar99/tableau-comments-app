@@ -40,6 +40,44 @@ body {
     align-items: center;
 }
 
+.header-left {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.status-indicator {
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 8px;
+    transition: background-color 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.status-indicator:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+#statusIcon {
+    font-size: 1.2rem;
+    color: #28a745;
+    animation: pulse 2s infinite;
+}
+
+#statusIcon.error {
+    color: #ff4757;
+}
+
+#statusIcon.warning {
+    color: #ffa502;
+}
+
+#statusIcon.info {
+    color: #3742fa;
+}
+
 .app-title {
     font-size: 1.2rem;
     font-weight: 700;
@@ -732,110 +770,113 @@ body {
     line-height: 1.5;
 }
 
-/* Compact Status Panel */
-.status-panel {
-    position: absolute;
-    top: 16px;
-    left: 16px;
-    background: rgba(255, 255, 255, 0.95);
+/* Detailed Debug Panel */
+.debug-panel {
+    background: white;
     border: 1px solid #dee2e6;
-    border-radius: 6px;
-    font-family: 'Inter', sans-serif;
-    box-shadow: 0 2px 12px rgba(0,0,0,0.15);
+    border-radius: 8px;
+    margin: 0 16px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.1);
     z-index: 1000;
-    max-width: 280px;
-    backdrop-filter: blur(10px);
+    font-family: 'Inter', sans-serif;
 }
 
-.status-header {
-    padding: 8px 12px;
+.debug-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 16px 20px;
+    border-radius: 8px 8px 0 0;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    cursor: pointer;
 }
 
-.status-title {
-    font-size: 0.8rem;
+.debug-header h3 {
+    margin: 0;
+    font-size: 1.1rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.debug-close {
+    background: none;
+    border: none;
+    color: white;
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 4px;
+    transition: background-color 0.2s ease;
+}
+
+.debug-close:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.debug-content {
+    padding: 20px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 24px;
+}
+
+.debug-section {
+    background: #f8f9fa;
+    padding: 16px;
+    border-radius: 8px;
+    border: 1px solid #e9ecef;
+}
+
+.debug-section h4 {
+    margin: 0 0 12px 0;
+    color: #495057;
+    font-size: 0.95rem;
     font-weight: 600;
     display: flex;
     align-items: center;
     gap: 6px;
-    color: #495057;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
 
-#statusIndicator {
-    font-size: 0.6rem;
-    color: #28a745;
-    animation: pulse 2s infinite;
-}
-
-#statusIndicator.error {
-    color: #dc3545;
-}
-
-#statusIndicator.warning {
-    color: #ffc107;
-}
-
-.status-toggle {
-    background: none;
-    border: none;
-    color: #6c757d;
-    cursor: pointer;
-    padding: 2px;
-    font-size: 0.7rem;
-    transition: color 0.2s ease;
-}
-
-.status-toggle:hover {
-    color: #495057;
-}
-
-.status-content {
-    border-top: 1px solid #f1f3f4;
-    padding: 8px 12px;
-    transition: all 0.3s ease;
-    overflow: hidden;
-    max-height: 200px;
-}
-
-.status-content.minimized {
-    max-height: 0;
-    padding-top: 0;
-    padding-bottom: 0;
-    border-top: none;
-}
-
-.status-row {
+.debug-row {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 2px 0;
-    font-size: 0.75rem;
+    padding: 6px 0;
+    font-size: 0.85rem;
+    border-bottom: 1px solid #e9ecef;
 }
 
-.status-label {
+.debug-row:last-child {
+    border-bottom: none;
+}
+
+.debug-label {
     color: #6c757d;
     font-weight: 500;
+    flex: 1;
 }
 
-.status-value {
+.debug-value {
     color: #28a745;
     font-weight: 600;
-    font-family: monospace;
-    font-size: 0.75rem;
+    font-family: 'Courier New', monospace;
+    font-size: 0.8rem;
+    text-align: right;
+    flex: 1;
 }
 
-.status-value.error {
+.debug-value.error {
     color: #dc3545;
 }
 
-.status-value.warning {
+.debug-value.warning {
     color: #ffc107;
 }
 
-.status-value.info {
+.debug-value.info {
     color: #17a2b8;
 }
 
