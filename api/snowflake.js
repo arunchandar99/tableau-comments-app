@@ -164,9 +164,6 @@ export default async function handler(req, res) {
                 result = await healthCheck();
                 break;
 
-            case 'testConnection':
-                result = await testConnectionDetailed();
-                break;
 
             case 'getSQL':
                 result = {
@@ -533,66 +530,6 @@ function generateId() {
     return Date.now().toString(36) + Math.random().toString(36).substr(2, 9);
 }
 
-// Detailed connection test to show exact error
-async function testConnectionDetailed() {
-    try {
-        console.log('🔍 Testing Snowflake connection with detailed logging...');
-        console.log('📋 Connection Config:', {
-            account: connectionConfig.account,
-            username: connectionConfig.username,
-            database: connectionConfig.database,
-            schema: connectionConfig.schema,
-            warehouse: connectionConfig.warehouse,
-            role: connectionConfig.role
-        });
-
-        const conn = await getConnection();
-        console.log('✅ Connection established, testing SQL execution...');
-
-        return new Promise((resolve, reject) => {
-            conn.execute({
-                sqlText: 'SELECT 1 as test_value',
-                complete: (err, stmt, rows) => {
-                    if (err) {
-                        console.error('❌ SQL execution failed:', err);
-                        resolve({
-                            success: false,
-                            connectionEstablished: true,
-                            sqlExecutionFailed: true,
-                            error: err.message,
-                            errorCode: err.code,
-                            sqlState: err.sqlState
-                        });
-                    } else {
-                        console.log('✅ SQL executed successfully:', rows);
-                        resolve({
-                            success: true,
-                            connectionEstablished: true,
-                            sqlExecutionSuccessful: true,
-                            testResult: rows[0]?.TEST_VALUE || 'unknown',
-                            message: 'Full connection and SQL execution successful'
-                        });
-                    }
-                }
-            });
-        });
-
-    } catch (error) {
-        console.error('❌ Connection failed:', error);
-        return {
-            success: false,
-            connectionEstablished: false,
-            error: error.message,
-            errorCode: error.code || 'unknown',
-            configUsed: {
-                account: connectionConfig.account,
-                username: connectionConfig.username,
-                database: connectionConfig.database,
-                schema: connectionConfig.schema
-            }
-        };
-    }
-}
 
 // Generate batch SQL for manual execution
 function generateBatchSQL() {

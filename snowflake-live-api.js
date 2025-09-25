@@ -169,35 +169,25 @@ class LiveSnowflakeAPI {
 
             console.log('✅ Posts saved successfully to Snowflake!');
 
-            // Show save results with hybrid approach
+            // Show save results
             if (result.isSnowflakeAvailable !== undefined) {
                 const debugElement = document.getElementById('debug-info');
                 if (debugElement) {
-                    if (result.isSnowflakeAvailable) {
-                        debugElement.innerHTML = `
-                            ✅ API: ${this.baseURL}<br>
-                            🚀 ${result.executedCount}/${posts.length} posts saved directly to Snowflake
-                        `;
-                    } else {
-                        debugElement.innerHTML = `
-                            ✅ API: ${this.baseURL}<br>
-                            📋 ${result.queuedCount}/${posts.length} posts queued - <button onclick="window.snowflakeAPI.getSQL()" style="font-size: 10px; padding: 2px 4px; background: #ff9500; color: white; border: none; border-radius: 2px; cursor: pointer;">Get SQL</button>
-                        `;
-                    }
+                    debugElement.innerHTML = `
+                        ✅ API: ${this.baseURL}<br>
+                        🚀 ${result.executedCount || result.savedCount}/${posts.length} posts saved to Snowflake
+                    `;
                 }
 
-                // Show notification based on execution mode
+                // Show notification
                 if (typeof showNotification === 'function') {
-                    if (result.isSnowflakeAvailable) {
-                        showNotification(`🚀 ${result.executedCount} post(s) automatically saved to Snowflake!`);
-                    } else {
-                        showNotification(`📋 ${result.queuedCount} post(s) queued for manual sync - click "Get SQL"`);
-                    }
+                    const count = result.executedCount || result.savedCount || posts.length;
+                    showNotification(`🚀 ${count} post(s) automatically saved to Snowflake!`);
                 }
             } else {
                 // Fallback notification
                 if (typeof showNotification === 'function') {
-                    showNotification(`✅ ${posts.length} post(s) processed!`);
+                    showNotification(`✅ ${posts.length} post(s) saved!`);
                 }
             }
 
@@ -313,116 +303,6 @@ class LiveSnowflakeAPI {
         }
     }
 
-    async getSQL() {
-        try {
-            console.log('📋 Getting sync SQL from API...');
-
-            const result = await this.apiCall('getSQL');
-
-            if (result.success && result.sql) {
-                // Copy to clipboard
-                try {
-                    navigator.clipboard.writeText(result.sql);
-                    console.log('✅ SQL copied to clipboard');
-                } catch (clipError) {
-                    console.log('⚠️ Could not auto-copy SQL');
-                }
-
-                // Show SQL in new window
-                const newWindow = window.open('', '_blank', 'width=900,height=700,scrollbars=yes');
-                newWindow.document.write(`
-                    <html>
-                        <head>
-                            <title>Snowflake Sync SQL</title>
-                            <style>
-                                body {
-                                    font-family: 'Courier New', monospace;
-                                    padding: 20px;
-                                    background: #1e1e1e;
-                                    color: #d4d4d4;
-                                    line-height: 1.4;
-                                }
-                                .header {
-                                    background: linear-gradient(135deg, #ff9500, #ff6b00);
-                                    color: white;
-                                    padding: 20px;
-                                    border-radius: 8px;
-                                    margin-bottom: 20px;
-                                }
-                                .sql-container {
-                                    background: #2d2d2d;
-                                    padding: 20px;
-                                    border-radius: 8px;
-                                    overflow: auto;
-                                    white-space: pre-wrap;
-                                    border-left: 4px solid #ff9500;
-                                }
-                                .copy-btn {
-                                    background: #ff9500;
-                                    color: white;
-                                    border: none;
-                                    padding: 12px 24px;
-                                    border-radius: 5px;
-                                    cursor: pointer;
-                                    margin: 10px 0;
-                                    font-size: 14px;
-                                }
-                                .copy-btn:hover { background: #e68500; }
-                                .instructions {
-                                    background: rgba(255, 149, 0, 0.1);
-                                    border: 1px solid #ff9500;
-                                    padding: 15px;
-                                    border-radius: 5px;
-                                    margin-bottom: 20px;
-                                }
-                            </style>
-                        </head>
-                        <body>
-                            <div class="header">
-                                <h2>🗲 Snowflake Sync SQL</h2>
-                                <p>Execute this SQL in your Snowflake worksheet to sync ${result.statements} statements</p>
-                                <p><strong>Status:</strong> ${result.isSnowflakeAvailable ? 'Direct connection failed' : 'Using fallback mode'}</p>
-                            </div>
-
-                            <div class="instructions">
-                                <h3>📋 Instructions:</h3>
-                                <ol>
-                                    <li>Copy the SQL below (click Copy button or Ctrl+A, Ctrl+C)</li>
-                                    <li>Open your Snowflake account: <strong>ZDDMCAD-FGC62251.snowflakecomputing.com</strong></li>
-                                    <li>Create a new worksheet</li>
-                                    <li>Paste the SQL and click "Run All"</li>
-                                    <li>Verify data appears in your POSTS table</li>
-                                </ol>
-                            </div>
-
-                            <button class="copy-btn" onclick="navigator.clipboard.writeText(document.getElementById('sql-content').textContent).then(() => alert('✅ SQL copied to clipboard!'))">
-                                📋 Copy All SQL
-                            </button>
-
-                            <div class="sql-container" id="sql-content">${result.sql}</div>
-                        </body>
-                    </html>
-                `);
-
-                // Show notification
-                if (typeof showNotification === 'function') {
-                    showNotification(`📋 SQL opened in new window (${result.statements} statements) - Copy and run in Snowflake!`);
-                }
-
-                return true;
-            } else {
-                alert('No SQL statements to sync.');
-                return false;
-            }
-
-        } catch (error) {
-            console.error('❌ Failed to get sync SQL:', error);
-            if (typeof showNotification === 'function') {
-                showNotification(`❌ Failed to get SQL: ${error.message}`);
-            }
-            return false;
-        }
-    }
 }
 
 // Initialize the Live Snowflake API
