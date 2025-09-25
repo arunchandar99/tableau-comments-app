@@ -42,6 +42,9 @@ class LiveSnowflakeAPI {
             <div id="sync-info" style="margin-top: 8px; font-size: 11px; color: #666;">
                 Establishing live connection to Snowflake...
             </div>
+            <div id="debug-info" style="margin-top: 8px; font-size: 10px; color: #888; background: #f5f5f5; padding: 5px; border-radius: 3px; font-family: monospace;">
+                API: ${this.baseURL}
+            </div>
         `;
 
         // Add to page when DOM is ready
@@ -57,14 +60,21 @@ class LiveSnowflakeAPI {
     updateStatus(isConnected, message) {
         const statusElement = document.getElementById('connection-status');
         const infoElement = document.getElementById('sync-info');
+        const debugElement = document.getElementById('debug-info');
 
         if (statusElement && infoElement) {
             if (isConnected) {
                 statusElement.innerHTML = '<span style="color: #28a745;">🟢 Live Connected</span>';
                 infoElement.textContent = message || 'Real-time sync active';
+                if (debugElement) {
+                    debugElement.innerHTML = `✅ API: ${this.baseURL}<br>✅ Connection successful`;
+                }
             } else {
                 statusElement.innerHTML = '<span style="color: #dc3545;">🔴 Connection Failed</span>';
                 infoElement.textContent = message || 'Check server deployment';
+                if (debugElement) {
+                    debugElement.innerHTML = `❌ API: ${this.baseURL}<br>❌ Error: ${message}`;
+                }
             }
         }
     }
