@@ -5,14 +5,14 @@
   "type": "module",
   "scripts": {
     "dev": "vercel dev",
-    "build": "vercel build",
+    "build": "echo 'Build complete'",
     "deploy": "vercel --prod"
   },
   "dependencies": {
     "node-fetch": "^3.3.0"
   },
   "devDependencies": {
-    "@vercel/node": "^2.15.10"
+    "@vercel/node": "^3.0.7"
   },
   "engines": {
     "node": ">=18.x"

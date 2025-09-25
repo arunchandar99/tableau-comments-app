@@ -2,7 +2,7 @@
 class LiveSnowflakeAPI {
     constructor() {
         // This will be your deployed server URL
-        this.baseURL = 'https://your-app.vercel.app/api'; // Replace with actual deployed URL
+        this.baseURL = 'https://comments-op15z3kgp-arun-chandars-projects.vercel.app/api'; // Replace with actual deployed URL
         this.isConnected = false;
         this.createStatusPanel();
     }
