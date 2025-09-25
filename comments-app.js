@@ -344,14 +344,26 @@ function renderComments(comments) {
     }
 
     container.innerHTML = comments.map(comment => `
-        <div class="comment-item">
+        <div class="comment-item" id="comment-${comment.id}">
             <div class="comment-avatar">
                 ${comment.author.charAt(0).toUpperCase()}
             </div>
             <div class="comment-body">
                 <div class="comment-author">${comment.author}</div>
-                <div class="comment-content">${comment.content}</div>
-                <div class="comment-time">${getTimeAgo(comment.timestamp)}</div>
+                <div class="comment-content" id="content-${comment.id}">${comment.content}</div>
+                <div class="comment-edit-form" id="edit-form-${comment.id}" style="display: none;">
+                    <textarea class="comment-edit-textarea" id="edit-textarea-${comment.id}">${comment.content}</textarea>
+                    <div class="comment-edit-actions">
+                        <button type="button" class="btn-cancel" onclick="cancelEditComment('${comment.id}')">Cancel</button>
+                        <button type="button" class="btn-primary" onclick="saveEditComment('${comment.id}')">Save</button>
+                    </div>
+                </div>
+                <div class="comment-meta">
+                    <span class="comment-time">${getTimeAgo(comment.timestamp)}</span>
+                    <button class="comment-edit-btn" onclick="editComment('${comment.id}')" title="Edit comment">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                </div>
             </div>
         </div>
     `).join('');
@@ -515,6 +527,89 @@ function submitComment() {
 
     // Show success notification
     showNotification('Comment posted successfully!');
+}
+
+function editComment(commentId) {
+    // Hide the content and show edit form
+    document.getElementById(`content-${commentId}`).style.display = 'none';
+    document.getElementById(`edit-form-${commentId}`).style.display = 'block';
+
+    // Focus on the textarea
+    const textarea = document.getElementById(`edit-textarea-${commentId}`);
+    textarea.focus();
+    textarea.select();
+}
+
+function cancelEditComment(commentId) {
+    // Show the content and hide edit form
+    document.getElementById(`content-${commentId}`).style.display = 'block';
+    document.getElementById(`edit-form-${commentId}`).style.display = 'none';
+
+    // Reset textarea to original content
+    const post = posts.find(p => p.id === currentPostId);
+    const comment = post.comments.find(c => c.id === commentId);
+    document.getElementById(`edit-textarea-${commentId}`).value = comment.content;
+}
+
+async function saveEditComment(commentId) {
+    const textarea = document.getElementById(`edit-textarea-${commentId}`);
+    const newContent = textarea.value.trim();
+
+    if (!newContent) {
+        showNotification('Comment cannot be empty.');
+        return;
+    }
+
+    // Find the post and comment
+    const post = posts.find(p => p.id === currentPostId);
+    const comment = post.comments.find(c => c.id === commentId);
+
+    if (!comment) {
+        showNotification('Comment not found.');
+        return;
+    }
+
+    // Update the comment content
+    const originalContent = comment.content;
+    comment.content = newContent;
+
+    try {
+        // Update in Snowflake
+        await updateCommentInSnowflake(commentId, comment);
+
+        // Update the display
+        document.getElementById(`content-${commentId}`).innerHTML = newContent;
+        document.getElementById(`content-${commentId}`).style.display = 'block';
+        document.getElementById(`edit-form-${commentId}`).style.display = 'none';
+
+        showNotification('Comment updated successfully!');
+
+    } catch (error) {
+        // Revert the change if save failed
+        comment.content = originalContent;
+        showNotification('Failed to update comment. Please try again.');
+        console.error('Error updating comment:', error);
+    }
+}
+
+async function updateCommentInSnowflake(commentId, comment) {
+    try {
+        const result = await snowflakeAPI.apiCall('updateComment', {
+            commentId: commentId,
+            comment: comment
+        });
+
+        if (!result.success) {
+            throw new Error(result.error || 'Failed to update comment');
+        }
+
+        console.log('✅ Comment updated in Snowflake');
+        return true;
+
+    } catch (error) {
+        console.error('❌ Failed to update comment in Snowflake:', error);
+        throw error;
+    }
 }
 
 async function deletePost(postId) {
