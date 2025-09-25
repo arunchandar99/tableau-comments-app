@@ -34,7 +34,9 @@ class DebugSnowflakeAPI {
             <h4 style="margin: 0 0 10px 0;">Snowflake Debug
                 <button onclick="document.getElementById('snowflake-debug-panel').style.display='none'" style="float: right; font-size: 8px; padding: 2px 4px;">Hide</button>
             </h4>
-            <div id="sql-output" style="background: white; padding: 5px; border: 1px solid #ccc; min-height: 80px; max-height: 200px; overflow-y: auto;"></div>
+            <div id="sql-output" style="background: white; padding: 5px; border: 1px solid #ccc; min-height: 80px; max-height: 200px; overflow-y: auto;">
+                <div style="color: blue; font-weight: bold; margin: 5px 0;">🔵 Debug script loaded at ${new Date().toLocaleTimeString()}</div>
+            </div>
         `;
 
         // Add a show button when panel is hidden
@@ -186,11 +188,26 @@ VALUES (
 
 // Replace the existing API
 const debugSnowflakeAPI = new DebugSnowflakeAPI();
+
+// Aggressive override - ensure our debug API is always used
 window.snowflakeAPI = debugSnowflakeAPI;
+
+// Override again after a delay in case another script tries to override us
+setTimeout(() => {
+    window.snowflakeAPI = debugSnowflakeAPI;
+    console.log('🐛 Debug API re-enforced after delay');
+}, 2000);
 
 console.log('🐛 Debug Snowflake API loaded - check bottom-right corner for SQL output!');
 console.log('🐛 API object:', window.snowflakeAPI);
 console.log('🐛 API savePost function:', window.snowflakeAPI.savePost);
+
+// Add global debugging info
+window.DEBUG_INFO = {
+    apiLoaded: true,
+    loadTime: new Date().toISOString(),
+    apiType: 'DebugSnowflakeAPI'
+};
 
 // Add a test function to the window for debugging
 window.testDebugAPI = function() {
