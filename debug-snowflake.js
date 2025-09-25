@@ -15,10 +15,10 @@ class DebugSnowflakeAPI {
         debugPanel.id = 'snowflake-debug-panel';
         debugPanel.style.cssText = `
             position: fixed;
-            top: 10px;
+            bottom: 10px;
             right: 10px;
             width: 300px;
-            max-height: 400px;
+            max-height: 300px;
             background: #f0f0f0;
             border: 2px solid #333;
             border-radius: 5px;
@@ -31,18 +31,50 @@ class DebugSnowflakeAPI {
         `;
 
         debugPanel.innerHTML = `
-            <h4 style="margin: 0 0 10px 0;">Snowflake Debug</h4>
-            <div id="sql-output" style="background: white; padding: 5px; border: 1px solid #ccc; min-height: 100px; max-height: 300px; overflow-y: auto;"></div>
-            <button onclick="document.getElementById('snowflake-debug-panel').style.display='none'" style="margin-top: 5px;">Hide</button>
+            <h4 style="margin: 0 0 10px 0;">Snowflake Debug
+                <button onclick="document.getElementById('snowflake-debug-panel').style.display='none'" style="float: right; font-size: 8px; padding: 2px 4px;">Hide</button>
+            </h4>
+            <div id="sql-output" style="background: white; padding: 5px; border: 1px solid #ccc; min-height: 80px; max-height: 200px; overflow-y: auto;"></div>
         `;
+
+        // Add a show button when panel is hidden
+        const showButton = document.createElement('button');
+        showButton.id = 'show-debug-btn';
+        showButton.innerHTML = 'SQL Debug';
+        showButton.style.cssText = `
+            position: fixed;
+            bottom: 10px;
+            right: 10px;
+            padding: 5px 10px;
+            background: #333;
+            color: white;
+            border: none;
+            border-radius: 3px;
+            font-size: 10px;
+            cursor: pointer;
+            display: none;
+            z-index: 10000;
+        `;
+        showButton.onclick = () => {
+            debugPanel.style.display = 'block';
+            showButton.style.display = 'none';
+        };
+
+        // Update hide button to show the show button
+        debugPanel.querySelector('button').onclick = () => {
+            debugPanel.style.display = 'none';
+            showButton.style.display = 'block';
+        };
 
         // Add to page when DOM is ready
         if (document.readyState === 'loading') {
             document.addEventListener('DOMContentLoaded', () => {
                 document.body.appendChild(debugPanel);
+                document.body.appendChild(showButton);
             });
         } else {
             document.body.appendChild(debugPanel);
+            document.body.appendChild(showButton);
         }
     }
 
