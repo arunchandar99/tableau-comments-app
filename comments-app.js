@@ -263,10 +263,16 @@ function setupRichTextEditor() {
 // Feed Rendering
 function renderFeed() {
     console.log('🎨 renderFeed called - posts:', posts.length, 'filteredPosts:', filteredPosts.length);
+    showDebugStatus(`Rendering ${filteredPosts.length} posts to feed`);
 
     const feedContainer = document.getElementById('feedContainer');
     const loadingSpinner = document.getElementById('loadingSpinner');
     const emptyState = document.getElementById('emptyState');
+
+    if (!feedContainer) {
+        showDebugStatus('ERROR: feedContainer not found!');
+        return;
+    }
 
     // Show loading
     loadingSpinner.style.display = 'flex';
@@ -281,60 +287,84 @@ function renderFeed() {
 
         if (filteredPosts.length === 0) {
             console.log('📭 No filtered posts, showing empty state');
+            showDebugStatus('No posts to show - showing empty state');
             emptyState.style.display = 'flex';
         } else {
             console.log('✅ Rendering', filteredPosts.length, 'posts to feed');
-            feedContainer.innerHTML = filteredPosts.map(post => renderPost(post)).join('');
+            try {
+                const renderedHTML = filteredPosts.map(post => renderPost(post)).join('');
+                feedContainer.innerHTML = renderedHTML;
+                showDebugStatus(`Successfully rendered ${filteredPosts.length} posts`);
+            } catch (error) {
+                showDebugStatus(`ERROR rendering posts: ${error.message}`);
+            }
         }
     }, 300);
 }
 
 function renderPost(post) {
-    const timeAgo = getTimeAgo(post.timestamp);
+    try {
+        const timeAgo = getTimeAgo(post.timestamp);
 
-    return `
-        <div class="post-card" data-post-id="${post.id}">
-            <div class="post-header">
-                <div class="post-header-left">
-                    <div class="post-type-badge ${post.type.toLowerCase().replace(/\s+/g, '-')}">${post.type}</div>
-                    <div class="post-time">${timeAgo}</div>
-                </div>
-                <button class="delete-post-btn" onclick="deletePost('${post.id}')" title="Delete Post">
-                    <i class="fas fa-trash"></i>
-                </button>
-            </div>
+        // Ensure all required properties exist with defaults
+        const safePost = {
+            id: post.id || 'unknown',
+            type: post.type || 'General',
+            author: post.author || 'Unknown User',
+            metricValue: post.metricValue || '',
+            metricLabel: post.metricLabel || '',
+            content: post.content || '',
+            likes: post.likes || 0,
+            comments: post.comments || []
+        };
 
-            <div class="post-author">
-                <div class="author-avatar">
-                    <i class="fas fa-user"></i>
+        return `
+            <div class="post-card" data-post-id="${safePost.id}">
+                <div class="post-header">
+                    <div class="post-header-left">
+                        <div class="post-type-badge ${safePost.type.toLowerCase().replace(/\s+/g, '-')}">${safePost.type}</div>
+                        <div class="post-time">${timeAgo}</div>
+                    </div>
+                    <button class="delete-post-btn" onclick="deletePost('${safePost.id}')" title="Delete Post">
+                        <i class="fas fa-trash"></i>
+                    </button>
                 </div>
-                <div class="author-info">
-                    <div class="author-name">${post.author}</div>
-                    <div class="post-metric">
-                        <span class="metric-value">${post.metricValue}</span>
-                        <span class="metric-label">${post.metricLabel}</span>
+
+                <div class="post-author">
+                    <div class="author-avatar">
+                        <i class="fas fa-user"></i>
+                    </div>
+                    <div class="author-info">
+                        <div class="author-name">${safePost.author}</div>
+                        <div class="post-metric">
+                            <span class="metric-value">${safePost.metricValue}</span>
+                            <span class="metric-label">${safePost.metricLabel}</span>
+                        </div>
                     </div>
                 </div>
-            </div>
 
-            <div class="post-content">${post.content}</div>
+                <div class="post-content">${safePost.content}</div>
 
-            <div class="post-actions">
-                <button class="action-btn like-btn" onclick="toggleLike('${post.id}')">
-                    <i class="fas fa-heart"></i>
-                    <span>${post.likes}</span>
-                </button>
-                <button class="action-btn comment-btn" onclick="showComments('${post.id}')">
-                    <i class="fas fa-comment"></i>
-                    <span>${post.comments.length}</span>
-                </button>
-                <button class="action-btn share-btn" onclick="sharePost('${post.id}')">
-                    <i class="fas fa-share"></i>
-                    Share
-                </button>
+                <div class="post-actions">
+                    <button class="action-btn like-btn" onclick="toggleLike('${safePost.id}')">
+                        <i class="fas fa-heart"></i>
+                        <span>${safePost.likes}</span>
+                    </button>
+                    <button class="action-btn comment-btn" onclick="showComments('${safePost.id}')">
+                        <i class="fas fa-comment"></i>
+                        <span>${safePost.comments.length}</span>
+                    </button>
+                    <button class="action-btn share-btn" onclick="sharePost('${safePost.id}')">
+                        <i class="fas fa-share"></i>
+                        Share
+                    </button>
+                </div>
             </div>
-        </div>
-    `;
+        `;
+    } catch (error) {
+        showDebugStatus(`ERROR in renderPost: ${error.message}`);
+        return `<div class="post-card">Error rendering post: ${error.message}</div>`;
+    }
 }
 
 // Post Actions
