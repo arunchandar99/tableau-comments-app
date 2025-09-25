@@ -2,7 +2,7 @@
 class LiveSnowflakeAPI {
     constructor() {
         // This will be your deployed server URL
-        this.baseURL = 'https://comments-5wpi592hq-arun-chandars-projects.vercel.app/api/snowflake'; // Real Snowflake execution API
+        this.baseURL = 'https://comments-ixoaekgra-arun-chandars-projects.vercel.app/api/snowflake'; // Real Snowflake execution API with fallback
         this.isConnected = false;
         this.createStatusPanel();
     }
