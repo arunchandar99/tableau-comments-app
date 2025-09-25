@@ -82,6 +82,7 @@ function setupEventListeners() {
 
     // Status panel toggle
     document.getElementById('statusToggle').addEventListener('click', toggleStatusPanel);
+    document.querySelector('.status-header').addEventListener('click', toggleStatusPanel);
 }
 
 // Post Management
@@ -771,12 +772,17 @@ function updateResultsCounter() {
     counter.textContent = `Showing ${count} post${count !== 1 ? 's' : ''}`;
 }
 
-// Status Panel Functions
-function updateStatus(action, type = 'info') {
-    const lastActionElement = document.getElementById('lastAction');
-    if (lastActionElement) {
-        lastActionElement.textContent = action;
-        lastActionElement.className = `status-value ${type}`;
+// Compact Status Panel Functions
+function updateStatus(message, type = 'info') {
+    const statusText = document.getElementById('statusText');
+    const statusIndicator = document.getElementById('statusIndicator');
+
+    if (statusText) {
+        statusText.textContent = message;
+    }
+
+    if (statusIndicator) {
+        statusIndicator.className = `fas fa-circle ${type}`;
     }
 }
 
@@ -809,10 +815,10 @@ function toggleStatusPanel() {
 
     if (statusContent.classList.contains('minimized')) {
         statusContent.classList.remove('minimized');
-        statusToggle.innerHTML = '<i class="fas fa-minus"></i>';
+        statusToggle.innerHTML = '<i class="fas fa-chevron-down"></i>';
     } else {
         statusContent.classList.add('minimized');
-        statusToggle.innerHTML = '<i class="fas fa-plus"></i>';
+        statusToggle.innerHTML = '<i class="fas fa-chevron-up"></i>';
     }
 }
 

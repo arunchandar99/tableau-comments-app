@@ -732,70 +732,91 @@ body {
     line-height: 1.5;
 }
 
-/* Status Panel */
+/* Compact Status Panel */
 .status-panel {
-    background: #f8f9fa;
+    position: absolute;
+    top: 16px;
+    left: 16px;
+    background: rgba(255, 255, 255, 0.95);
     border: 1px solid #dee2e6;
-    border-radius: 8px;
-    margin: 16px;
+    border-radius: 6px;
     font-family: 'Inter', sans-serif;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    box-shadow: 0 2px 12px rgba(0,0,0,0.15);
+    z-index: 1000;
+    max-width: 280px;
+    backdrop-filter: blur(10px);
 }
 
 .status-header {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    padding: 10px 16px;
-    border-radius: 8px 8px 0 0;
+    padding: 8px 12px;
     display: flex;
     justify-content: space-between;
     align-items: center;
+    cursor: pointer;
 }
 
 .status-title {
-    font-size: 0.9rem;
+    font-size: 0.8rem;
     font-weight: 600;
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
+    color: #495057;
+}
+
+#statusIndicator {
+    font-size: 0.6rem;
+    color: #28a745;
+    animation: pulse 2s infinite;
+}
+
+#statusIndicator.error {
+    color: #dc3545;
+}
+
+#statusIndicator.warning {
+    color: #ffc107;
 }
 
 .status-toggle {
     background: none;
     border: none;
-    color: white;
+    color: #6c757d;
     cursor: pointer;
-    padding: 4px;
-    border-radius: 4px;
-    transition: background-color 0.2s ease;
+    padding: 2px;
+    font-size: 0.7rem;
+    transition: color 0.2s ease;
 }
 
 .status-toggle:hover {
-    background: rgba(255, 255, 255, 0.2);
+    color: #495057;
 }
 
 .status-content {
-    padding: 12px 16px;
+    border-top: 1px solid #f1f3f4;
+    padding: 8px 12px;
     transition: all 0.3s ease;
     overflow: hidden;
+    max-height: 200px;
 }
 
 .status-content.minimized {
-    height: 0;
+    max-height: 0;
     padding-top: 0;
     padding-bottom: 0;
+    border-top: none;
 }
 
 .status-row {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 4px 0;
-    font-size: 0.85rem;
+    padding: 2px 0;
+    font-size: 0.75rem;
 }
 
 .status-label {
-    color: #495057;
+    color: #6c757d;
     font-weight: 500;
 }
 
@@ -803,7 +824,7 @@ body {
     color: #28a745;
     font-weight: 600;
     font-family: monospace;
-    font-size: 0.8rem;
+    font-size: 0.75rem;
 }
 
 .status-value.error {
@@ -816,6 +837,12 @@ body {
 
 .status-value.info {
     color: #17a2b8;
+}
+
+@keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.5; }
+    100% { opacity: 1; }
 }
 
 /* Animations */
