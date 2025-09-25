@@ -164,17 +164,32 @@ class DebugSnowflakeAPI {
                     .replace(/\r/g, '')         // Remove carriage returns
                     .replace(/\t/g, ' ');       // Replace tabs with spaces
 
-                const sql = `INSERT INTO ${this.config.database}.${this.config.schema}.POSTS
+                // Ensure timestamp is a valid number
+                const timestamp = parseInt(post.timestamp) || Date.now();
+
+                // Clean other text fields
+                const cleanMetricValue = String(post.metricValue || '').replace(/'/g, "''");
+                const cleanMetricLabel = String(post.metricLabel || '').replace(/'/g, "''");
+                const cleanType = String(post.type || '').replace(/'/g, "''");
+                const cleanId = String(post.id || '').replace(/'/g, "''");
+                const cleanAuthor = String(post.author || 'Tableau User').replace(/'/g, "''");
+
+                const sql = `-- Generated SQL for post: ${cleanId}
+-- Timestamp: ${new Date(timestamp).toISOString()}
+USE DATABASE ${this.config.database};
+USE SCHEMA ${this.config.schema};
+
+INSERT INTO POSTS
 (ID, POST_TYPE, METRIC_VALUE, METRIC_LABEL, CONTENT, AUTHOR, TIMESTAMP_MS, LIKES)
 VALUES (
-    '${post.id}',
-    '${post.type}',
-    '${post.metricValue.replace(/'/g, "''")}',
-    '${post.metricLabel.replace(/'/g, "''")}',
+    '${cleanId}',
+    '${cleanType}',
+    '${cleanMetricValue}',
+    '${cleanMetricLabel}',
     '${cleanContent}',
-    '${post.author || 'Tableau User'}',
-    ${post.timestamp},
-    ${post.likes || 0}
+    '${cleanAuthor}',
+    ${timestamp},
+    ${parseInt(post.likes) || 0}
 );`;
 
                 this.logSQL(sql, `SAVE POST: ${post.metricLabel || post.id}`);
