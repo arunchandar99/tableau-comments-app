@@ -66,7 +66,9 @@ function createPost(postData) {
     };
 
     posts.unshift(post); // Add to beginning
-    savePostsToStorage();
+
+    // Save only the new post to Snowflake
+    saveNewPostToSnowflake(post);
     return post;
 }
 
@@ -76,9 +78,9 @@ async function loadPostsFromStorage() {
         posts = await snowflakeAPI.loadPosts();
 
         if (posts.length === 0) {
-            // Add some sample data for MVP
+            // Add some sample data for MVP (local display only, not saved to database)
             posts = getSamplePosts();
-            await savePostsToStorage();
+            // Note: Don't save sample data to Snowflake - only save actual user posts
         }
     } catch (error) {
         console.error('Error loading posts from Snowflake, using localStorage fallback:', error);
@@ -101,14 +103,25 @@ async function savePostsToStorage() {
     }
 }
 
+async function saveNewPostToSnowflake(post) {
+    try {
+        await snowflakeAPI.savePosts([post]); // Save only the new post
+        console.log('✅ New post saved to Snowflake individually');
+    } catch (error) {
+        console.error('Error saving new post to Snowflake:', error);
+        // Fallback to localStorage only
+        localStorage.setItem('commentsApp_posts', JSON.stringify(posts));
+    }
+}
+
 async function saveCommentToSnowflake(postId, comment) {
     try {
         await snowflakeAPI.saveComment(postId, comment);
         console.log('✅ Comment saved to Snowflake individually');
     } catch (error) {
         console.error('Error saving comment to Snowflake:', error);
-        // Fallback to saving all posts if individual comment save fails
-        savePostsToStorage();
+        // Fallback to localStorage only if Snowflake fails
+        localStorage.setItem('commentsApp_posts', JSON.stringify(posts));
     }
 }
 
