@@ -204,10 +204,16 @@ export class StatusComponent {
      */
     toggleDebugPanel() {
         try {
+            logger.debug('toggleDebugPanel called');
             const debugPanel = document.getElementById('debugPanel');
-            if (!debugPanel) return;
+            if (!debugPanel) {
+                logger.error('Debug panel element not found!');
+                return;
+            }
 
-            const isVisible = debugPanel.style.display !== 'none';
+            const currentDisplay = debugPanel.style.display;
+            const isVisible = currentDisplay !== 'none';
+            logger.debug(`Debug panel current display: ${currentDisplay}, isVisible: ${isVisible}`);
 
             if (isVisible) {
                 debugPanel.style.display = 'none';
@@ -271,16 +277,25 @@ export class StatusComponent {
         // Status indicator click
         const statusIndicator = document.getElementById('statusIndicator');
         if (statusIndicator) {
-            statusIndicator.addEventListener('click', () => this.toggleDebugPanel());
+            statusIndicator.addEventListener('click', () => {
+                logger.debug('Status indicator clicked');
+                this.toggleDebugPanel();
+            });
+            logger.debug('Status indicator click listener added');
+        } else {
+            logger.error('Status indicator element not found!');
         }
 
         // Debug panel close button
         const debugClose = document.getElementById('debugClose');
         if (debugClose) {
             debugClose.addEventListener('click', () => this.hideDebugPanel());
+            logger.debug('Debug close button listener added');
+        } else {
+            logger.warn('Debug close button not found (this is normal on first load)');
         }
 
-        logger.debug('Status component event listeners setup');
+        logger.debug('Status component event listeners setup complete');
     }
 
     /**
