@@ -251,6 +251,44 @@ statusComponent.runDiagnostics();   // Run diagnostics
 - **No Credential Exposure**: Passwords not shown in debug
 - **Input Validation**: All data validated before processing
 
+## 🎨 **Recent UI/UX Enhancements**
+
+### **Rich Text Editor (Enhanced)**
+- **Comprehensive Formatting Toolbar**: Bold, italic, underline, strikethrough
+- **List Support**: Bullet points and numbered lists
+- **Text Alignment**: Left, center, right alignment options
+- **Color Controls**: Text color and highlight color pickers
+- **Font Sizing**: Small, normal, large, x-large options
+- **Format Clearing**: Remove all formatting button
+- **Grouped Toolbar**: Organized by functionality with responsive design
+
+### **Collapsible Filters System**
+- **Header Integration**: Filters toggle moved to main header next to status
+- **Space Efficiency**: Filters hidden by default, shown only when needed
+- **Frozen Panel**: Filters panel stays fixed when open (no scrolling)
+- **Smart Layout**: Feed content adjusts height based on filter visibility
+- **Consistent UI**: Matches status indicator design pattern
+
+### **Fixed Layout System**
+- **Extension-Optimized**: App fits any Tableau extension size automatically
+- **Layered Architecture**: Fixed header/filters/results with scrollable feed
+- **No Double Scrolling**: Eliminated app-level scrolling, only feed scrolls
+- **Responsive Heights**: Dynamic height calculations based on UI state
+- **Z-Index Management**: Proper layer stacking (header → results → filters → feed)
+
+### **Layout Specifications**
+```css
+/* Fixed Layout Layers */
+Header:         position: fixed, z-index: 1000, top: 0
+Results:        position: fixed, z-index: 900, top: 64px
+Filters:        position: fixed, z-index: 800, top: 112px
+Feed:           margin-top: 112px/188px (with/without filters)
+
+/* Height Calculations */
+Feed Height:    calc(100vh - 112px)     // No filters
+Feed Height:    calc(100vh - 188px)     // With filters
+```
+
 ## 🚀 **Future Enhancements**
 
 The modular architecture supports easy addition of:
@@ -258,8 +296,24 @@ The modular architecture supports easy addition of:
 - **User Management** with authentication
 - **Real-time Updates** with WebSocket connections
 - **File Attachments** with cloud storage
-- **Advanced Filtering** with search capabilities
+- **Advanced Search** with full-text filtering
 - **Export/Import** functionality
 - **Mobile Responsiveness** improvements
+- **Keyboard Shortcuts** for power users
+- **Drag & Drop** for post reordering
 
-This architecture ensures the codebase remains maintainable, testable, and extensible as new features are added.
+## 📱 **Tableau Extension Compatibility**
+
+### **HTML onclick Pattern**
+- **Tableau Requirement**: Uses HTML onclick handlers instead of addEventListener
+- **Reasoning**: Better compatibility with Tableau's security sandbox
+- **Implementation**: `onclick="window.componentName && window.componentName.method()"`
+- **Global References**: Components exposed on window object for HTML access
+
+### **Layout Constraints**
+- **Fixed Dimensions**: App designed to fit any extension size automatically
+- **No External Scrolling**: Extension content never overflows parent container
+- **Frozen Panels**: Interactive elements stay accessible during scrolling
+- **Touch-Friendly**: All interactive elements sized for touch interfaces
+
+This architecture ensures the codebase remains maintainable, testable, and extensible as new features are added, while maintaining perfect compatibility with Tableau's extension environment.
