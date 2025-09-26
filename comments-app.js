@@ -11,6 +11,9 @@ async function initializeApp() {
         await tableau.extensions.initializeAsync();
         console.log('Comments App initialized successfully');
 
+        // Initialize dashboard filter synchronization
+        await initializeDashboardSync();
+
         // Initialize Snowflake API
         updateConnectionStatus('Connecting to Snowflake...', 'info');
         updateStatus('Initializing Snowflake API...');
@@ -964,6 +967,272 @@ function showNotification(message) {
 document.addEventListener('DOMContentLoaded', () => {
     initializeApp();
 });
+
+// Dashboard Synchronization Functions
+let dashboardFilters = {
+    month: null,
+    year: null,
+    isConnected: false
+};
+
+async function initializeDashboardSync() {
+    try {
+        console.log('🔗 Initializing dashboard synchronization...');
+        updateStatus('Connecting to dashboard worksheets...', 'info');
+
+        const dashboard = tableau.extensions.dashboardContent.dashboard;
+        console.log('📊 Dashboard found:', dashboard.name);
+
+        // Get all worksheets in the dashboard
+        const worksheets = dashboard.worksheets;
+        console.log('📋 Found', worksheets.length, 'worksheets');
+
+        if (worksheets.length > 0) {
+            // Listen to filter changes on all worksheets
+            worksheets.forEach(worksheet => {
+                console.log('🎯 Adding filter listener to worksheet:', worksheet.name);
+                worksheet.addEventListener(tableau.TableauEventType.FilterChanged, onDashboardFilterChanged);
+            });
+
+            // Get initial filter values
+            await syncWithDashboardFilters();
+            dashboardFilters.isConnected = true;
+            updateStatus('Connected to dashboard filters', 'connected');
+
+            // Hide manual filter controls since dashboard drives filtering
+            hideManualFilters();
+
+        } else {
+            console.log('⚠️ No worksheets found - manual filters enabled');
+            updateStatus('No dashboard worksheets found - manual filtering enabled', 'warning');
+        }
+
+    } catch (error) {
+        console.error('❌ Dashboard sync initialization failed:', error);
+        updateStatus('Dashboard sync failed - manual filtering enabled', 'warning');
+        showManualFilters();
+    }
+}
+
+async function onDashboardFilterChanged(filterChangedEvent) {
+    try {
+        console.log('🔄 Dashboard filter changed:', filterChangedEvent);
+        updateStatus('Dashboard filter changed - syncing comments...', 'info');
+
+        // Sync with the new filter values
+        await syncWithDashboardFilters();
+
+        updateStatus('Comments synced with dashboard filters', 'connected');
+    } catch (error) {
+        console.error('❌ Error syncing dashboard filters:', error);
+        updateStatus('Filter sync error - using manual filters', 'warning');
+    }
+}
+
+async function syncWithDashboardFilters() {
+    try {
+        const dashboard = tableau.extensions.dashboardContent.dashboard;
+        const worksheets = dashboard.worksheets;
+
+        let foundDateFilter = false;
+
+        for (const worksheet of worksheets) {
+            console.log('🔍 Checking filters in worksheet:', worksheet.name);
+
+            try {
+                // Get all filters from this worksheet
+                const filters = await worksheet.getFiltersAsync();
+                console.log('📅 Found', filters.length, 'filters in', worksheet.name);
+
+                for (const filter of filters) {
+                    console.log('🏷️ Filter:', filter.fieldName, 'Type:', filter.filterType);
+
+                    // Look for date-related filters
+                    if (isDateFilter(filter)) {
+                        foundDateFilter = true;
+                        await extractDateValues(filter);
+                        break;
+                    }
+                }
+
+                if (foundDateFilter) break;
+
+            } catch (filterError) {
+                console.log('⚠️ Could not access filters for worksheet:', worksheet.name, filterError.message);
+            }
+        }
+
+        if (foundDateFilter) {
+            console.log('✅ Dashboard date filters applied:', dashboardFilters);
+            // Update the comment filters to match dashboard
+            updateCommentsFilters();
+        } else {
+            console.log('📅 No date filters found in dashboard - using all dates');
+            dashboardFilters.month = null;
+            dashboardFilters.year = null;
+            updateCommentsFilters();
+        }
+
+    } catch (error) {
+        console.error('❌ Error syncing dashboard filters:', error);
+    }
+}
+
+function isDateFilter(filter) {
+    const fieldName = filter.fieldName.toLowerCase();
+    const dateKeywords = ['date', 'month', 'year', 'time', 'day', 'quarter'];
+
+    return dateKeywords.some(keyword => fieldName.includes(keyword)) ||
+           filter.filterType === tableau.FilterType.Range; // Date ranges are common
+}
+
+async function extractDateValues(filter) {
+    try {
+        console.log('📅 Processing date filter:', filter.fieldName, 'Type:', filter.filterType);
+
+        if (filter.filterType === tableau.FilterType.Range) {
+            // Range filter - likely a date range
+            const rangeFilter = filter;
+            if (rangeFilter.minValue && rangeFilter.maxValue) {
+                console.log('📅 Date range:', rangeFilter.minValue, 'to', rangeFilter.maxValue);
+
+                const minDate = new Date(rangeFilter.minValue.value || rangeFilter.minValue);
+                const maxDate = new Date(rangeFilter.maxValue.value || rangeFilter.maxValue);
+
+                // If it's within the same month/year, use that
+                if (minDate.getFullYear() === maxDate.getFullYear()) {
+                    dashboardFilters.year = minDate.getFullYear();
+
+                    if (minDate.getMonth() === maxDate.getMonth()) {
+                        dashboardFilters.month = minDate.getMonth() + 1; // Convert to 1-based
+                    }
+                }
+            }
+        } else if (filter.filterType === tableau.FilterType.Categorical) {
+            // Categorical filter - might be month names or years
+            const categoricalFilter = filter;
+            if (categoricalFilter.appliedValues && categoricalFilter.appliedValues.length > 0) {
+                const values = categoricalFilter.appliedValues.map(v => v.value);
+                console.log('📅 Categorical date values:', values);
+
+                // Try to extract year and month from categorical values
+                extractFromCategoricalValues(values);
+            }
+        }
+
+    } catch (error) {
+        console.error('❌ Error extracting date values:', error);
+    }
+}
+
+function extractFromCategoricalValues(values) {
+    for (const value of values) {
+        const str = String(value).toLowerCase();
+
+        // Check for year (4 digits)
+        const yearMatch = str.match(/\b(20\d{2})\b/);
+        if (yearMatch) {
+            dashboardFilters.year = parseInt(yearMatch[1]);
+        }
+
+        // Check for month names
+        const monthNames = ['january', 'february', 'march', 'april', 'may', 'june',
+                           'july', 'august', 'september', 'october', 'november', 'december'];
+        const monthIndex = monthNames.findIndex(month => str.includes(month));
+        if (monthIndex !== -1) {
+            dashboardFilters.month = monthIndex + 1;
+        }
+
+        // Check for numeric month
+        const monthMatch = str.match(/\b(\d{1,2})\b/);
+        if (monthMatch) {
+            const month = parseInt(monthMatch[1]);
+            if (month >= 1 && month <= 12) {
+                dashboardFilters.month = month;
+            }
+        }
+    }
+}
+
+function updateCommentsFilters() {
+    console.log('🎯 Updating comments filters with dashboard values:', dashboardFilters);
+
+    // Update the filter dropdowns to match dashboard
+    const monthFilter = document.getElementById('monthFilter');
+    const yearFilter = document.getElementById('yearFilter');
+
+    if (monthFilter) {
+        monthFilter.value = dashboardFilters.month || '';
+        monthFilter.style.backgroundColor = dashboardFilters.month ? '#e8f5e8' : '';
+    }
+
+    if (yearFilter) {
+        yearFilter.value = dashboardFilters.year || '';
+        yearFilter.style.backgroundColor = dashboardFilters.year ? '#e8f5e8' : '';
+    }
+
+    // Apply the filters
+    applyFilters();
+
+    // Show sync indicator
+    showSyncIndicator();
+}
+
+function hideManualFilters() {
+    const filtersContainer = document.querySelector('.filters-container');
+    if (filtersContainer) {
+        // Add a visual indicator that filters are dashboard-controlled
+        let syncIndicator = document.querySelector('.dashboard-sync-indicator');
+        if (!syncIndicator) {
+            syncIndicator = document.createElement('div');
+            syncIndicator.className = 'dashboard-sync-indicator';
+            syncIndicator.innerHTML = `
+                <div style="background: #e8f5e8; padding: 8px 12px; border-radius: 6px; margin-bottom: 10px; font-size: 0.9rem; color: #28a745;">
+                    <i class="fas fa-link"></i> Filters synced with dashboard
+                </div>
+            `;
+            filtersContainer.insertBefore(syncIndicator, filtersContainer.firstChild);
+        }
+
+        // Keep filters visible but add sync styling
+        const filterSelects = filtersContainer.querySelectorAll('.filter-select');
+        filterSelects.forEach(select => {
+            select.style.pointerEvents = 'none';
+            select.style.opacity = '0.7';
+            select.title = 'Controlled by dashboard filters';
+        });
+    }
+}
+
+function showManualFilters() {
+    const filtersContainer = document.querySelector('.filters-container');
+    if (filtersContainer) {
+        // Remove sync indicator
+        const syncIndicator = document.querySelector('.dashboard-sync-indicator');
+        if (syncIndicator) {
+            syncIndicator.remove();
+        }
+
+        // Restore manual control
+        const filterSelects = filtersContainer.querySelectorAll('.filter-select');
+        filterSelects.forEach(select => {
+            select.style.pointerEvents = 'auto';
+            select.style.opacity = '1';
+            select.title = '';
+        });
+    }
+}
+
+function showSyncIndicator() {
+    // Brief visual feedback that sync occurred
+    const indicator = document.querySelector('.dashboard-sync-indicator');
+    if (indicator) {
+        indicator.style.background = '#d4edda';
+        setTimeout(() => {
+            if (indicator) indicator.style.background = '#e8f5e8';
+        }, 500);
+    }
+}
 
 // Add notification animation to CSS
 const style = document.createElement('style');
