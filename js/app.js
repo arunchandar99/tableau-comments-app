@@ -62,6 +62,9 @@ class CommentsApp {
 
             // Update final status
             const isConnected = snowflakeService.isConnected;
+            console.log(`DEBUG: snowflakeService.isConnected = ${isConnected}`); // Debug log
+            logger.info(`Final status update: isConnected=${isConnected}`);
+
             this.components.status.updateStatus(
                 isConnected ? 'App ready - Snowflake connected' : 'App ready - Using local storage only',
                 isConnected ? STATUS_TYPES.CONNECTED : STATUS_TYPES.WARNING
