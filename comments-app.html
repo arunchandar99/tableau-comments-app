@@ -20,6 +20,11 @@
                     </h1>
                 </div>
                 <div class="header-right">
+                    <div class="filters-indicator" id="filtersIndicator" title="Click to view filters" onclick="window.commentsApp && window.commentsApp.toggleFilters()">
+                        <i class="fas fa-filter" id="filtersIcon"></i>
+                        <span class="filters-text">Filters</span>
+                        <i class="fas fa-chevron-down filters-arrow" id="filterArrow"></i>
+                    </div>
                     <div class="status-indicator" id="statusIndicator" title="Click to view system status" onclick="window.statusComponent && window.statusComponent.toggleDebugPanel()">
                         <i class="fas fa-circle" id="statusIcon"></i>
                         <span class="status-text">Status</span>
@@ -109,13 +114,8 @@
             </div>
         </div>
 
-        <!-- Filters Toggle -->
-        <div class="filters-header">
-            <button class="filters-toggle-btn" id="filtersToggleBtn" onclick="window.commentsApp && window.commentsApp.toggleFilters()">
-                <i class="fas fa-filter"></i>
-                Filters
-                <i class="fas fa-chevron-down filter-arrow" id="filterArrow"></i>
-            </button>
+        <!-- Results Counter -->
+        <div class="results-header">
             <div class="results-counter" id="resultsCounter">
                 Showing 0 posts
             </div>

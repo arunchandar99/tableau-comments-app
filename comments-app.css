@@ -1521,44 +1521,43 @@ body {
     }
 }
 
-/* Filters Toggle */
-.filters-header {
+/* Filters Indicator (in header) */
+.filters-indicator {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    padding: 16px 24px;
-    background: white;
-    border-bottom: 1px solid var(--border-color);
-    margin-bottom: 0;
-}
-
-.filters-toggle-btn {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    background: var(--accent-color);
-    color: white;
-    border: none;
-    border-radius: 8px;
-    padding: 8px 16px;
-    font-size: 14px;
-    font-weight: 500;
+    gap: 6px;
+    padding: 8px 12px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 6px;
     cursor: pointer;
     transition: all 0.2s ease;
+    color: white;
+    font-size: 14px;
+    margin-right: 12px;
 }
 
-.filters-toggle-btn:hover {
-    background: var(--accent-color-dark);
-    transform: translateY(-1px);
+.filters-indicator:hover {
+    background: rgba(255, 255, 255, 0.2);
 }
 
-.filter-arrow {
+.filters-arrow {
     transition: transform 0.3s ease;
     font-size: 12px;
 }
 
-.filter-arrow.rotated {
+.filters-arrow.rotated {
     transform: rotate(180deg);
+}
+
+/* Results Header */
+.results-header {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 12px 24px;
+    background: white;
+    border-bottom: 1px solid var(--border-color);
+    margin-bottom: 0;
 }
 
 .filters-container {
