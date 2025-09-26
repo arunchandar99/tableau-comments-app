@@ -43,18 +43,25 @@ body {
 .header-left {
     display: flex;
     align-items: center;
-    gap: 16px;
+}
+
+.header-right {
+    display: flex;
+    align-items: center;
+    gap: 15px;
 }
 
 .status-indicator {
     cursor: pointer;
-    padding: 8px 12px;
-    border-radius: 8px;
+    padding: 6px 10px;
+    border-radius: 6px;
     transition: all 0.2s ease;
     display: flex;
     align-items: center;
-    gap: 8px;
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    gap: 6px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.05);
+    font-size: 0.8rem;
 }
 
 .status-indicator:hover {
@@ -63,7 +70,12 @@ body {
 }
 
 #statusIcon {
-    font-size: 0.8rem;
+    font-size: 0.7rem;
+    color: #dc3545;
+    transition: color 0.3s ease;
+}
+
+#statusIcon.connected {
     color: #28a745;
     animation: pulse 2s infinite;
 }
@@ -81,9 +93,9 @@ body {
 }
 
 .status-text {
-    font-size: 0.9rem;
+    font-size: 0.75rem;
     font-weight: 500;
-    color: white;
+    color: rgba(255, 255, 255, 0.9);
 }
 
 .status-arrow {

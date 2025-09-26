@@ -18,9 +18,14 @@ async function initializeApp() {
         // Initialize database configuration info
         updateDatabaseConfigInfo();
 
-        await snowflakeAPI.initialize();
-        updateConnectionStatus('Connected to Snowflake', 'info');
-        updateStatus('Loading posts from storage...');
+        const isConnected = await snowflakeAPI.initialize();
+        if (isConnected) {
+            updateConnectionStatus('Connected to Snowflake', 'connected');
+            updateStatus('Connected to Snowflake - Loading posts...', 'connected');
+        } else {
+            updateConnectionStatus('Connection Failed', 'error');
+            updateStatus('Snowflake connection failed - Using local storage', 'error');
+        }
 
         // Load existing posts from Snowflake (with localStorage fallback)
         await loadPostsFromStorage();
@@ -41,7 +46,11 @@ async function initializeApp() {
         updateResultsCounter();
         console.log('✅ App initialization complete');
 
-        updateStatus('App ready - all systems operational', 'info');
+        if (isConnected) {
+            updateStatus('App ready - Snowflake connected', 'connected');
+        } else {
+            updateStatus('App ready - Using local storage only', 'warning');
+        }
 
     } catch (error) {
         console.error('Failed to initialize Comments App:', error);
@@ -784,7 +793,12 @@ function updateStatus(message, type = 'info') {
     const lastUpdate = document.getElementById('lastUpdate');
 
     if (statusIcon) {
-        statusIcon.className = `fas fa-circle ${type}`;
+        // Only show green light when successfully connected
+        if (type === 'connected' && window.snowflakeAPI && window.snowflakeAPI.isConnected) {
+            statusIcon.className = `fas fa-circle connected`;
+        } else {
+            statusIcon.className = `fas fa-circle ${type}`;
+        }
     }
 
     if (lastAction) {
