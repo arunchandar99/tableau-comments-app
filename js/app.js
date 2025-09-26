@@ -335,7 +335,8 @@ class CommentsApp {
             this.renderFeed();
             this.updateResultsCounter();
             this.components.status.updateFilteredPostsCount(filteredPosts.length);
-            this.components.status.updateStatus(`Showing ${filteredPosts.length} posts`, STATUS_TYPES.INFO);
+            // Don't override connection status, just update the count display
+            logger.debug(`Filter applied: Showing ${filteredPosts.length} posts`);
 
         } catch (error) {
             logger.error('Failed to apply filters:', error);
@@ -353,7 +354,7 @@ class CommentsApp {
             });
 
             this.applyFilters();
-            this.components.status.updateStatus('Filters cleared', STATUS_TYPES.INFO);
+            // Don't override connection status when clearing filters
             logger.debug('Filters cleared');
         } catch (error) {
             logger.error('Failed to clear filters:', error);

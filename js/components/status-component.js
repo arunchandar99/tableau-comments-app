@@ -21,6 +21,7 @@ export class StatusComponent {
         this.appStartTime = Date.now();
         this.updateDatabaseConfigInfo();
         this.updateAllDebugInfo();
+        this.setupEventListeners();
     }
 
     /**
@@ -267,21 +268,19 @@ export class StatusComponent {
      * Setup event listeners
      */
     setupEventListeners() {
-        document.addEventListener('DOMContentLoaded', () => {
-            // Status indicator click
-            const statusIndicator = document.getElementById('statusIndicator');
-            if (statusIndicator) {
-                statusIndicator.addEventListener('click', () => this.toggleDebugPanel());
-            }
+        // Status indicator click
+        const statusIndicator = document.getElementById('statusIndicator');
+        if (statusIndicator) {
+            statusIndicator.addEventListener('click', () => this.toggleDebugPanel());
+        }
 
-            // Debug panel close button
-            const debugClose = document.getElementById('debugClose');
-            if (debugClose) {
-                debugClose.addEventListener('click', () => this.hideDebugPanel());
-            }
+        // Debug panel close button
+        const debugClose = document.getElementById('debugClose');
+        if (debugClose) {
+            debugClose.addEventListener('click', () => this.hideDebugPanel());
+        }
 
-            logger.debug('Status component event listeners setup');
-        });
+        logger.debug('Status component event listeners setup');
     }
 
     /**

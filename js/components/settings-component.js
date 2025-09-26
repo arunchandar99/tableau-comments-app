@@ -373,18 +373,17 @@ export class SettingsComponent {
      * Setup event listeners
      */
     setupEventListeners() {
-        document.addEventListener('DOMContentLoaded', () => {
-            // Create settings tab and modal
-            this.createSettingsTab();
+        // Create settings tab immediately since DOM is already loaded when component is instantiated
+        this.createSettingsTab();
 
-            // Settings button click
-            const settingsBtn = document.getElementById('settingsBtn');
-            if (settingsBtn) {
-                settingsBtn.addEventListener('click', () => this.showSettings());
-            }
+        // Settings button click
+        const settingsBtn = document.getElementById('settingsBtn');
+        if (settingsBtn) {
+            settingsBtn.addEventListener('click', () => this.showSettings());
+        }
 
-            // Settings modal events
-            document.addEventListener('click', (e) => {
+        // Settings modal events
+        document.addEventListener('click', (e) => {
                 // Close modal
                 if (e.target.matches('#closeSettingsBtn, #cancelSettingsBtn')) {
                     this.hideSettings();
@@ -431,9 +430,8 @@ export class SettingsComponent {
                     e.preventDefault();
                     this.showSettings();
                 }
-            });
-
-            logger.debug('Settings component event listeners setup');
         });
+
+        logger.debug('Settings component event listeners setup');
     }
 }
