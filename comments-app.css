@@ -48,20 +48,22 @@ body {
 
 .status-indicator {
     cursor: pointer;
-    padding: 8px;
+    padding: 8px 12px;
     border-radius: 8px;
-    transition: background-color 0.2s ease;
+    transition: all 0.2s ease;
     display: flex;
     align-items: center;
-    justify-content: center;
+    gap: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 .status-indicator:hover {
     background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.3);
 }
 
 #statusIcon {
-    font-size: 1.2rem;
+    font-size: 0.8rem;
     color: #28a745;
     animation: pulse 2s infinite;
 }
@@ -76,6 +78,22 @@ body {
 
 #statusIcon.info {
     color: #3742fa;
+}
+
+.status-text {
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: white;
+}
+
+.status-arrow {
+    font-size: 0.7rem;
+    color: rgba(255, 255, 255, 0.7);
+    transition: transform 0.2s ease;
+}
+
+.status-indicator:hover .status-arrow {
+    transform: translateY(1px);
 }
 
 .app-title {

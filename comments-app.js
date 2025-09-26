@@ -15,6 +15,9 @@ async function initializeApp() {
         updateConnectionStatus('Connecting to Snowflake...', 'info');
         updateStatus('Initializing Snowflake API...');
 
+        // Initialize database configuration info
+        updateDatabaseConfigInfo();
+
         await snowflakeAPI.initialize();
         updateConnectionStatus('Connected to Snowflake', 'info');
         updateStatus('Loading posts from storage...');
@@ -860,9 +863,36 @@ function updateAllDebugInfo() {
         apiEndpoint.textContent = window.snowflakeAPI.baseURL || 'Not configured';
     }
 
+    // Update database configuration details
+    updateDatabaseConfigInfo();
+
     // Update posts counts
     updatePostsCount(posts.length);
     updateFilteredPostsCount(filteredPosts.length);
+}
+
+function updateDatabaseConfigInfo() {
+    // Database configuration from the API
+    const dbConfig = {
+        account: 'ZDDMCAD-FGC62251',
+        database: 'TABLEAU_EXTENSIONS',
+        schema: 'COMMENTS_APP',
+        username: 'ARUNCHANDAR99',
+        warehouse: 'COMPUTE_WH'
+    };
+
+    // Update database configuration fields
+    const dbAccount = document.getElementById('dbAccount');
+    const dbName = document.getElementById('dbName');
+    const dbSchema = document.getElementById('dbSchema');
+    const dbUsername = document.getElementById('dbUsername');
+    const dbWarehouse = document.getElementById('dbWarehouse');
+
+    if (dbAccount) dbAccount.textContent = dbConfig.account;
+    if (dbName) dbName.textContent = dbConfig.database;
+    if (dbSchema) dbSchema.textContent = dbConfig.schema;
+    if (dbUsername) dbUsername.textContent = dbConfig.username;
+    if (dbWarehouse) dbWarehouse.textContent = dbConfig.warehouse;
 }
 
 // Utility Functions
