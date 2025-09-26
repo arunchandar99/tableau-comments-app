@@ -444,6 +444,15 @@ class CommentsApp {
                 });
             });
 
+            // Font size selector
+            const fontSizeSelect = document.getElementById('fontSizeSelect');
+            if (fontSizeSelect) {
+                fontSizeSelect.addEventListener('change', (e) => {
+                    document.execCommand('fontSize', false, e.target.value);
+                    document.getElementById('postContent')?.focus();
+                });
+            }
+
             logger.debug('Rich text editor setup complete');
         } catch (error) {
             logger.error('Failed to setup rich text editor:', error);
