@@ -59,18 +59,17 @@ class StorageService {
 
             const data = JSON.parse(stored);
 
-            // Check version compatibility
-            if (data.version !== APP_CONFIG.version) {
-                logger.warn('Version mismatch in localStorage data, clearing...');
-                this.clearPosts();
-                return [];
+            // Check version compatibility - be more lenient
+            if (data.version && data.version !== APP_CONFIG.version) {
+                logger.warn(`Version mismatch in localStorage data (${data.version} vs ${APP_CONFIG.version}), but preserving data`);
             }
 
             logger.debug(`Loaded ${data.posts.length} posts from localStorage`);
             return data.posts || [];
         } catch (error) {
             logger.error('Failed to load posts from localStorage:', error);
-            this.clearPosts(); // Clear corrupted data
+            // Don't clear data on parse errors - just return empty for this load
+            // The data might be recoverable later or partially valid
             return [];
         }
     }

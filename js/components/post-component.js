@@ -75,21 +75,38 @@ export class PostComponent {
             logger.info('Loading posts...');
 
             // Try loading from Snowflake first
-            const snowflakePosts = await this.snowflakeService.loadPosts();
+            let snowflakePosts = [];
+            if (this.snowflakeService.isConnected) {
+                try {
+                    snowflakePosts = await this.snowflakeService.loadPosts();
+                    logger.info(`Snowflake returned ${snowflakePosts.length} posts`);
+                } catch (snowflakeError) {
+                    logger.warn('Snowflake load failed:', snowflakeError);
+                    snowflakePosts = [];
+                }
+            } else {
+                logger.info('Snowflake not connected, skipping database load');
+            }
 
+            // Try loading from local storage
+            const localPosts = this.storageService.loadPosts();
+            logger.info(`Local storage has ${localPosts.length} posts`);
+
+            // Choose data source priority: Snowflake > Local Storage > Sample Data
             if (snowflakePosts.length > 0) {
                 this.posts = snowflakePosts;
-                logger.success(`Loaded ${snowflakePosts.length} posts from Snowflake`);
+                logger.success(`Using ${snowflakePosts.length} posts from Snowflake`);
+            } else if (localPosts.length > 0) {
+                this.posts = localPosts;
+                logger.success(`Using ${localPosts.length} posts from local storage`);
             } else {
-                // Fallback to local storage
-                const localPosts = this.storageService.loadPosts();
-                this.posts = localPosts.length > 0 ? localPosts : this.getSamplePosts();
-                logger.info(`Loaded ${this.posts.length} posts from local storage`);
+                this.posts = this.getSamplePosts();
+                logger.success(`Using ${this.posts.length} sample posts`);
             }
 
             return this.posts;
         } catch (error) {
-            logger.error('Failed to load posts:', error);
+            logger.error('Critical error loading posts:', error);
             this.posts = this.getSamplePosts();
             return this.posts;
         }
