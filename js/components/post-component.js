@@ -139,6 +139,12 @@ export class PostComponent {
             logger.success('Post deleted successfully:', postId);
             showNotification('Post deleted successfully!');
 
+            // Refresh the UI to remove the deleted post from display
+            if (window.commentsApp && window.commentsApp.renderFeed) {
+                window.commentsApp.renderFeed();
+                window.commentsApp.updateResultsCounter();
+            }
+
             return true;
         } catch (error) {
             logger.error('Failed to delete post:', error);

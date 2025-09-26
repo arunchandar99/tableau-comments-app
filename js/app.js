@@ -137,6 +137,9 @@ class CommentsApp {
             window.statusComponent = this.components.status;
             window.settingsComponent = this.components.settings;
 
+            // Make app instance globally available for UI refresh
+            window.commentsApp = this;
+
             // Initialize status component
             this.components.status.initialize();
 
@@ -527,6 +530,7 @@ class CommentsApp {
             delete window.commentComponent;
             delete window.statusComponent;
             delete window.settingsComponent;
+            delete window.commentsApp;
 
             logger.success('Application cleanup complete');
         } catch (error) {
