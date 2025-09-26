@@ -92,16 +92,19 @@ export class PostComponent {
             const localPosts = this.storageService.loadPosts();
             logger.info(`Local storage has ${localPosts.length} posts`);
 
-            // Choose data source priority: Snowflake > Local Storage > Sample Data
-            if (snowflakePosts.length > 0) {
+            // Choose data source priority: Snowflake > Local Storage > Sample Data (only if no connection)
+            if (this.snowflakeService.isConnected) {
+                // If connected to Snowflake, use Snowflake data (even if empty)
                 this.posts = snowflakePosts;
-                logger.success(`Using ${snowflakePosts.length} posts from Snowflake`);
+                logger.success(`Using ${snowflakePosts.length} posts from Snowflake (connected)`);
             } else if (localPosts.length > 0) {
+                // If not connected but have local data, use it
                 this.posts = localPosts;
-                logger.success(`Using ${localPosts.length} posts from local storage`);
+                logger.success(`Using ${localPosts.length} posts from local storage (no connection)`);
             } else {
+                // Only use sample data if no connection and no local data
                 this.posts = this.getSamplePosts();
-                logger.success(`Using ${this.posts.length} sample posts`);
+                logger.success(`Using ${this.posts.length} sample posts (no connection, no local data)`);
             }
 
             return this.posts;
