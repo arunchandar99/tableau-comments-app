@@ -519,6 +519,35 @@ class CommentsApp {
     }
 
     /**
+     * Toggle filters visibility
+     */
+    toggleFilters() {
+        try {
+            const filtersContainer = document.getElementById('filtersContainer');
+            const filterArrow = document.getElementById('filterArrow');
+
+            if (!filtersContainer || !filterArrow) {
+                logger.warn('Filters elements not found');
+                return;
+            }
+
+            const isVisible = filtersContainer.style.display !== 'none';
+
+            if (isVisible) {
+                filtersContainer.style.display = 'none';
+                filterArrow.classList.remove('rotated');
+                logger.debug('Filters hidden');
+            } else {
+                filtersContainer.style.display = 'block';
+                filterArrow.classList.add('rotated');
+                logger.debug('Filters shown');
+            }
+        } catch (error) {
+            logger.error('Failed to toggle filters:', error);
+        }
+    }
+
+    /**
      * Cleanup application resources
      */
     cleanup() {

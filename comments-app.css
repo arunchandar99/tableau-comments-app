@@ -1521,6 +1521,57 @@ body {
     }
 }
 
+/* Filters Toggle */
+.filters-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 24px;
+    background: white;
+    border-bottom: 1px solid var(--border-color);
+    margin-bottom: 0;
+}
+
+.filters-toggle-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--accent-color);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 8px 16px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.filters-toggle-btn:hover {
+    background: var(--accent-color-dark);
+    transform: translateY(-1px);
+}
+
+.filter-arrow {
+    transition: transform 0.3s ease;
+    font-size: 12px;
+}
+
+.filter-arrow.rotated {
+    transform: rotate(180deg);
+}
+
+.filters-container {
+    background: #f8f9fa;
+    border-bottom: 1px solid var(--border-color);
+    transition: all 0.3s ease;
+    overflow: hidden;
+}
+
+.filters-container.show {
+    display: block !important;
+}
+
 /* Enhanced Rich Text Toolbar */
 .rich-text-toolbar {
     display: flex;

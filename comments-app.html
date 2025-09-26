@@ -109,8 +109,20 @@
             </div>
         </div>
 
-        <!-- Filters -->
-        <div class="filters-container">
+        <!-- Filters Toggle -->
+        <div class="filters-header">
+            <button class="filters-toggle-btn" id="filtersToggleBtn" onclick="window.commentsApp && window.commentsApp.toggleFilters()">
+                <i class="fas fa-filter"></i>
+                Filters
+                <i class="fas fa-chevron-down filter-arrow" id="filterArrow"></i>
+            </button>
+            <div class="results-counter" id="resultsCounter">
+                Showing 0 posts
+            </div>
+        </div>
+
+        <!-- Collapsible Filters -->
+        <div class="filters-container" id="filtersContainer" style="display: none;">
             <div class="filters-content">
                 <div class="filter-group">
                     <label for="monthFilter">Month</label>
@@ -157,10 +169,6 @@
                     <i class="fas fa-times"></i>
                     Clear Filters
                 </button>
-            </div>
-
-            <div class="results-counter" id="resultsCounter">
-                Showing 0 posts
             </div>
         </div>
 
