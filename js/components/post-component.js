@@ -131,6 +131,9 @@ export class PostComponent {
             const postIndex = this.posts.findIndex(p => p.id === postId);
             if (postIndex !== -1) {
                 this.posts.splice(postIndex, 1);
+                logger.debug(`Removed post from local array. New count: ${this.posts.length}`);
+            } else {
+                logger.warn(`Post ${postId} not found in local array`);
             }
 
             // Update local storage
@@ -141,8 +144,8 @@ export class PostComponent {
 
             // Refresh the UI to remove the deleted post from display
             if (window.commentsApp && window.commentsApp.renderFeed) {
-                window.commentsApp.renderFeed();
-                window.commentsApp.updateResultsCounter();
+                // First re-apply current filters to update filteredPosts array
+                window.commentsApp.applyFilters();
             }
 
             return true;
