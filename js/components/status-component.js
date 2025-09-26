@@ -21,7 +21,11 @@ export class StatusComponent {
         this.appStartTime = Date.now();
         this.updateDatabaseConfigInfo();
         this.updateAllDebugInfo();
-        this.setupEventListeners();
+
+        // Add a small delay to ensure DOM elements are ready
+        setTimeout(() => {
+            this.setupEventListeners();
+        }, 100);
     }
 
     /**
@@ -279,11 +283,14 @@ export class StatusComponent {
         if (statusIndicator) {
             statusIndicator.addEventListener('click', () => {
                 logger.debug('Status indicator clicked');
+                console.log('STATUS CLICKED!'); // Extra console log for visibility
                 this.toggleDebugPanel();
             });
             logger.debug('Status indicator click listener added');
+            console.log('Status indicator found and listener attached'); // Extra console log
         } else {
             logger.error('Status indicator element not found!');
+            console.error('STATUS INDICATOR NOT FOUND!'); // Extra console log
         }
 
         // Debug panel close button
