@@ -6,6 +6,7 @@
 import { APP_CONFIG, STATUS_TYPES } from './config/app-config.js';
 import { logger } from './utils/logger.js';
 import { showNotification, debounce } from './utils/helpers.js';
+import { themeEngine } from './utils/theme-engine.js';
 
 // Services
 import { snowflakeService } from './services/snowflake-service.js';
@@ -15,6 +16,7 @@ import { storageService } from './services/storage-service.js';
 import { PostComponent } from './components/post-component.js';
 import { CommentComponent } from './components/comment-component.js';
 import { StatusComponent } from './components/status-component.js';
+import { SettingsComponent } from './components/settings-component.js';
 
 class CommentsApp {
     constructor() {
@@ -127,11 +129,13 @@ class CommentsApp {
             this.components.status = new StatusComponent(snowflakeService, storageService);
             this.components.post = new PostComponent(snowflakeService, storageService);
             this.components.comment = new CommentComponent(snowflakeService, this.components.post);
+            this.components.settings = new SettingsComponent();
 
             // Make components globally available for HTML onclick handlers
             window.postComponent = this.components.post;
             window.commentComponent = this.components.comment;
             window.statusComponent = this.components.status;
+            window.settingsComponent = this.components.settings;
 
             // Initialize status component
             this.components.status.initialize();
@@ -521,6 +525,7 @@ class CommentsApp {
             delete window.postComponent;
             delete window.commentComponent;
             delete window.statusComponent;
+            delete window.settingsComponent;
 
             logger.success('Application cleanup complete');
         } catch (error) {
