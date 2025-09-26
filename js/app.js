@@ -525,8 +525,9 @@ class CommentsApp {
         try {
             const filtersContainer = document.getElementById('filtersContainer');
             const filterArrow = document.getElementById('filterArrow');
+            const feedContainer = document.getElementById('feedContainer');
 
-            if (!filtersContainer || !filterArrow) {
+            if (!filtersContainer || !filterArrow || !feedContainer) {
                 logger.warn('Filters elements not found');
                 return;
             }
@@ -536,10 +537,12 @@ class CommentsApp {
             if (isVisible) {
                 filtersContainer.style.display = 'none';
                 filterArrow.classList.remove('rotated');
+                feedContainer.classList.remove('with-filters');
                 logger.debug('Filters hidden');
             } else {
                 filtersContainer.style.display = 'block';
                 filterArrow.classList.add('rotated');
+                feedContainer.classList.add('with-filters');
                 logger.debug('Filters shown');
             }
         } catch (error) {
