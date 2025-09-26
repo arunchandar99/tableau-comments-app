@@ -7,7 +7,8 @@
 ├── 📄 comments-app.html          # Main HTML interface
 ├── 🎨 comments-app.css           # Styling and themes
 ├── 📄 comments-app.trex          # Tableau extension manifest
-├── 🔧 snowflake-live-api.js      # Legacy Snowflake client (to be removed)
+├── 📄 ARCHITECTURE.md            # This documentation file
+├── 📄 README.md                  # Project overview and setup
 ├── 📁 js/                        # Modern JavaScript modules
 │   ├── 📄 app.js                 # Main application controller
 │   ├── 📁 config/
@@ -24,8 +25,10 @@
 │       └── 📄 status-component.js   # Status & debugging
 ├── 📁 api/
 │   └── 📄 snowflake.js           # Backend REST API (Vercel)
-└── 📁 lib/
-    └── 📄 tableau.extensions.1.13.0.js  # Tableau Extensions API
+├── 📁 lib/
+│   └── 📄 tableau.extensions.1.13.0.js  # Tableau Extensions API
+├── 📄 package.json               # Node.js dependencies
+└── 📄 vercel.json               # Vercel deployment configuration
 ```
 
 ## 🏗️ **Architecture Overview**
