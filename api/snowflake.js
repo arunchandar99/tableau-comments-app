@@ -942,7 +942,7 @@ USE SCHEMA ${connectionConfig.schema};
 }
 
 // Main API handler for Vercel serverless functions
-export default async function handler(req, res) {
+async function handler(req, res) {
     // Set CORS headers
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
@@ -1080,3 +1080,5 @@ export default async function handler(req, res) {
         });
     }
 }
+
+module.exports = handler;
