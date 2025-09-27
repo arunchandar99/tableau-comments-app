@@ -241,7 +241,13 @@ class SnowflakeService {
     /**
      * Generic API call method with retry logic
      */
-    async apiCall(action, data = {}) {
+    async apiCall(action, method = 'POST', data = {}) {
+        // Handle legacy calls where second parameter was data
+        if (typeof method === 'object') {
+            data = method;
+            method = 'POST';
+        }
+
         const url = `${this.baseURL}?action=${action}`;
 
         for (let attempt = 0; attempt <= this.maxRetries; attempt++) {
@@ -251,14 +257,20 @@ class SnowflakeService {
                 const controller = new AbortController();
                 const timeoutId = setTimeout(() => controller.abort(), APP_CONFIG.api.timeout);
 
-                const response = await fetch(url, {
-                    method: 'POST',
+                const requestOptions = {
+                    method: method,
                     headers: {
                         'Content-Type': 'application/json',
                     },
-                    body: JSON.stringify(data),
                     signal: controller.signal
-                });
+                };
+
+                // Only add body for POST requests
+                if (method === 'POST' && Object.keys(data).length > 0) {
+                    requestOptions.body = JSON.stringify(data);
+                }
+
+                const response = await fetch(url, requestOptions);
 
                 clearTimeout(timeoutId);
 

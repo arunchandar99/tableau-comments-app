@@ -1682,6 +1682,82 @@ body {
     flex-shrink: 0;
 }
 
+/* Multi-Step Connection Wizard */
+.connection-step {
+    padding: 20px;
+    border: 2px solid #e9ecef;
+    border-radius: 8px;
+    margin-bottom: 16px;
+    transition: all 0.3s ease;
+}
+
+.connection-step.active {
+    border-color: var(--accent-color);
+    background: rgba(102, 126, 234, 0.05);
+}
+
+.connection-step h4 {
+    margin: 0 0 16px 0;
+    color: var(--accent-color);
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.step-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: space-between;
+    margin-top: 20px;
+}
+
+.btn-secondary {
+    background: #6c757d;
+    color: white;
+    border: none;
+    padding: 10px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.2s ease;
+}
+
+.btn-secondary:hover {
+    background: #5a6268;
+    transform: translateY(-1px);
+}
+
+.form-select {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    font-size: 14px;
+    background: white;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.form-select:focus {
+    outline: none;
+    border-color: var(--accent-color);
+    box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.2);
+}
+
+.form-select option[value="loading"] {
+    color: #6c757d;
+    font-style: italic;
+}
+
+.connection-step:not(.active) {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
 /* Results Header */
 .results-header {
     display: flex;

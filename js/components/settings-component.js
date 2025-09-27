@@ -198,50 +198,238 @@ export class SettingsComponent {
     }
 
     /**
-     * Handle connection form submission
+     * Handle Step 1: Authentication
      */
-    async handleConnectionSubmit(e) {
+    async handleAuthentication() {
         try {
-            e.preventDefault();
-
-            // Get form data
-            const credentials = {
+            // Get basic auth data
+            const authData = {
                 account: document.getElementById('sfAccount').value.trim(),
                 username: document.getElementById('sfUsername').value.trim(),
                 password: document.getElementById('sfPassword').value,
-                warehouse: document.getElementById('sfWarehouse').value.trim(),
-                database: document.getElementById('sfDatabase').value.trim(),
-                schema: document.getElementById('sfSchema').value.trim()
+                warehouse: document.getElementById('sfWarehouse').value.trim()
             };
 
-            const storageType = document.querySelector('input[name="storageType"]:checked').value;
-
             // Validate required fields
-            const requiredFields = ['account', 'username', 'password', 'warehouse', 'database', 'schema'];
-            const missingFields = requiredFields.filter(field => !credentials[field]);
+            const requiredFields = ['account', 'username', 'password', 'warehouse'];
+            const missingFields = requiredFields.filter(field => !authData[field]);
 
             if (missingFields.length > 0) {
-                this.updateConnectionStatus('error', `Please fill in all required fields: ${missingFields.join(', ')}`);
+                this.updateConnectionStatus('error', `Please fill in: ${missingFields.join(', ')}`);
                 return;
             }
 
-            // Test connection
-            const isConnected = await this.testConnection(credentials);
+            this.updateConnectionStatus('info', 'Authenticating and loading resources...');
 
-            if (isConnected) {
-                // Store credentials (without password for security)
-                const credentialsToStore = { ...credentials };
-                delete credentialsToStore.password; // Don't store password
+            // Update button state
+            const authBtn = document.getElementById('authenticateBtn');
+            authBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Authenticating...';
+            authBtn.disabled = true;
+
+            // Test authentication and load resources
+            const result = await this.authenticateAndLoadResources(authData);
+
+            if (result.success) {
+                // Store auth data temporarily
+                this.tempAuthData = authData;
+
+                // Populate dropdowns
+                this.populateResourceDropdowns(result.resources);
+
+                // Move to step 2
+                this.showStep(2);
+
+                this.updateConnectionStatus('success', 'Authentication successful! Please select database and schema.');
+            } else {
+                this.updateConnectionStatus('error', `Authentication failed: ${result.error}`);
+            }
+        } catch (error) {
+            logger.error('Authentication failed:', error);
+            this.updateConnectionStatus('error', 'Authentication failed. Please check your credentials.');
+        } finally {
+            // Reset button
+            const authBtn = document.getElementById('authenticateBtn');
+            authBtn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Authenticate & Load Resources';
+            authBtn.disabled = false;
+        }
+    }
+
+    /**
+     * Authenticate and load available resources
+     */
+    async authenticateAndLoadResources(authData) {
+        try {
+            const response = await this.snowflakeService.apiCall('load-resources', 'POST', {
+                credentials: authData
+            });
+            return response;
+        } catch (error) {
+            return { success: false, error: error.message };
+        }
+    }
+
+    /**
+     * Populate resource dropdowns
+     */
+    populateResourceDropdowns(resources) {
+        try {
+            // Populate databases
+            const dbSelect = document.getElementById('sfDatabase');
+            dbSelect.innerHTML = '<option value="">Select database...</option>';
+            resources.databases.forEach(db => {
+                dbSelect.innerHTML += `<option value="${db}">${db}</option>`;
+            });
+
+            // Populate warehouses (update the warehouse dropdown too)
+            const whSelect = document.getElementById('sfWarehouse');
+            if (resources.warehouses && resources.warehouses.length > 0) {
+                whSelect.innerHTML = '<option value="">Select warehouse...</option>';
+                resources.warehouses.forEach(wh => {
+                    whSelect.innerHTML += `<option value="${wh}">${wh}</option>`;
+                });
+                // Select the current warehouse
+                whSelect.value = this.tempAuthData.warehouse;
+            }
+
+            // Setup database change handler
+            dbSelect.addEventListener('change', (e) => {
+                this.loadSchemas(e.target.value);
+            });
+
+            logger.debug('Resource dropdowns populated');
+        } catch (error) {
+            logger.error('Failed to populate dropdowns:', error);
+        }
+    }
+
+    /**
+     * Load schemas for selected database
+     */
+    async loadSchemas(database) {
+        try {
+            if (!database) {
+                const schemaSelect = document.getElementById('sfSchema');
+                schemaSelect.innerHTML = '<option value="">Select schema...</option>';
+                return;
+            }
+
+            const schemaSelect = document.getElementById('sfSchema');
+            schemaSelect.innerHTML = '<option value="">Loading schemas...</option>';
+
+            const result = await this.snowflakeService.apiCall('load-schemas', 'POST', {
+                credentials: { ...this.tempAuthData, database }
+            });
+
+            if (result.success) {
+                schemaSelect.innerHTML = '<option value="">Select schema...</option>';
+                result.schemas.forEach(schema => {
+                    schemaSelect.innerHTML += `<option value="${schema}">${schema}</option>`;
+                });
+            } else {
+                schemaSelect.innerHTML = '<option value="">Failed to load schemas</option>';
+            }
+        } catch (error) {
+            logger.error('Failed to load schemas:', error);
+            const schemaSelect = document.getElementById('sfSchema');
+            schemaSelect.innerHTML = '<option value="">Error loading schemas</option>';
+        }
+    }
+
+    /**
+     * Show specific step
+     */
+    showStep(stepNumber) {
+        try {
+            // Hide all steps
+            document.querySelectorAll('.connection-step').forEach(step => {
+                step.style.display = 'none';
+                step.classList.remove('active');
+            });
+
+            // Show target step
+            const targetStep = document.getElementById(`step${stepNumber}`);
+            if (targetStep) {
+                targetStep.style.display = 'block';
+                targetStep.classList.add('active');
+            }
+
+            // Show/hide final connect button
+            const finalBtn = document.getElementById('finalConnectBtn');
+            if (finalBtn) {
+                finalBtn.style.display = stepNumber === 2 ? 'block' : 'none';
+            }
+
+            logger.debug(`Switched to step ${stepNumber}`);
+        } catch (error) {
+            logger.error('Failed to show step:', error);
+        }
+    }
+
+    /**
+     * Handle final connection setup
+     */
+    async handleFinalConnection() {
+        try {
+            const database = document.getElementById('sfDatabase').value;
+            const schema = document.getElementById('sfSchema').value;
+
+            if (!database || !schema) {
+                this.updateConnectionStatus('error', 'Please select both database and schema');
+                return;
+            }
+
+            // Complete credentials
+            const fullCredentials = {
+                ...this.tempAuthData,
+                database,
+                schema
+            };
+
+            this.updateConnectionStatus('info', 'Setting up tables and finalizing connection...');
+
+            // Update button state
+            const finalBtn = document.getElementById('finalConnectBtn');
+            finalBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Setting up...';
+            finalBtn.disabled = true;
+
+            // Test full connection and setup tables
+            const result = await this.snowflakeService.apiCall('setup-tables', 'POST', {
+                credentials: fullCredentials
+            });
+
+            if (result.success) {
+                // Initialize service with new credentials
+                await this.snowflakeService.initializeWithCredentials(fullCredentials);
+
+                // Store credentials
+                const storageType = document.querySelector('input[name="storageType"]:checked').value;
+                const credentialsToStore = { ...fullCredentials };
+                delete credentialsToStore.password;
                 this.storeCredentials(credentialsToStore, storageType);
 
-                // Close modal after successful connection
+                this.updateConnectionStatus('success', 'Connection established! Tables are ready for use.');
+
+                // Update global status
+                if (window.statusComponent) {
+                    window.statusComponent.updateConnectionStatus('Connected to Snowflake', 'connected');
+                }
+
+                // Close modal after success
                 setTimeout(() => {
                     this.toggleSettings();
                 }, 2000);
+
+            } else {
+                this.updateConnectionStatus('error', `Setup failed: ${result.error}`);
             }
         } catch (error) {
-            logger.error('Failed to handle connection submission:', error);
-            this.updateConnectionStatus('error', 'Failed to process connection request');
+            logger.error('Final connection failed:', error);
+            this.updateConnectionStatus('error', 'Connection setup failed');
+        } finally {
+            // Reset button
+            const finalBtn = document.getElementById('finalConnectBtn');
+            finalBtn.innerHTML = '<i class="fas fa-check"></i> Complete Setup';
+            finalBtn.disabled = false;
         }
     }
 
@@ -281,12 +469,25 @@ export class SettingsComponent {
                 if (e.target.matches('#settingsModal')) {
                     this.toggleSettings();
                 }
-            });
 
-            // Form submission
-            document.addEventListener('submit', (e) => {
-                if (e.target.matches('#snowflakeConnectionForm')) {
-                    this.handleConnectionSubmit(e);
+                // Step 1: Authentication
+                if (e.target.matches('#authenticateBtn')) {
+                    this.handleAuthentication();
+                }
+
+                // Step 2: Back to step 1
+                if (e.target.matches('#backToStep1')) {
+                    this.showStep(1);
+                }
+
+                // Step 2: Create tables and connect
+                if (e.target.matches('#createTablesBtn')) {
+                    this.handleFinalConnection();
+                }
+
+                // Final connect button
+                if (e.target.matches('#finalConnectBtn')) {
+                    this.handleFinalConnection();
                 }
             });
 

@@ -362,35 +362,72 @@
                 </div>
 
                 <form id="snowflakeConnectionForm">
-                    <div class="form-group">
-                        <label for="sfAccount">Account *</label>
-                        <input type="text" id="sfAccount" class="form-input" placeholder="e.g., abc123.snowflakecomputing.com" required>
-                        <small class="form-hint">Your Snowflake account identifier</small>
+                    <!-- Step 1: Basic Authentication -->
+                    <div class="connection-step active" id="step1">
+                        <h4><i class="fas fa-user-lock"></i> Step 1: Snowflake Authentication</h4>
+
+                        <div class="form-group">
+                            <label for="sfAccount">Account *</label>
+                            <input type="text" id="sfAccount" class="form-input" placeholder="e.g., abc123.snowflakecomputing.com" required>
+                            <small class="form-hint">Your Snowflake account identifier</small>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="sfUsername">Username *</label>
+                            <input type="text" id="sfUsername" class="form-input" placeholder="Your Snowflake username" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="sfPassword">Password *</label>
+                            <input type="password" id="sfPassword" class="form-input" placeholder="Your Snowflake password" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="sfWarehouse">Warehouse *</label>
+                            <select id="sfWarehouse" class="form-select" required>
+                                <option value="">Select warehouse...</option>
+                                <option value="COMPUTE_WH">COMPUTE_WH</option>
+                                <option value="loading">Loading warehouses...</option>
+                            </select>
+                            <small class="form-hint">Available warehouses will load after authentication</small>
+                        </div>
+
+                        <button type="button" class="btn-primary" id="authenticateBtn">
+                            <i class="fas fa-sign-in-alt"></i>
+                            Authenticate & Load Resources
+                        </button>
                     </div>
 
-                    <div class="form-group">
-                        <label for="sfUsername">Username *</label>
-                        <input type="text" id="sfUsername" class="form-input" placeholder="Your Snowflake username" required>
-                    </div>
+                    <!-- Step 2: Database & Schema Selection -->
+                    <div class="connection-step" id="step2" style="display: none;">
+                        <h4><i class="fas fa-database"></i> Step 2: Select Database & Schema</h4>
 
-                    <div class="form-group">
-                        <label for="sfPassword">Password *</label>
-                        <input type="password" id="sfPassword" class="form-input" placeholder="Your Snowflake password" required>
-                    </div>
+                        <div class="form-group">
+                            <label for="sfDatabase">Database *</label>
+                            <select id="sfDatabase" class="form-select" required>
+                                <option value="">Select database...</option>
+                            </select>
+                            <small class="form-hint">Choose from your available databases</small>
+                        </div>
 
-                    <div class="form-group">
-                        <label for="sfWarehouse">Warehouse *</label>
-                        <input type="text" id="sfWarehouse" class="form-input" placeholder="e.g., COMPUTE_WH" required>
-                    </div>
+                        <div class="form-group">
+                            <label for="sfSchema">Schema *</label>
+                            <select id="sfSchema" class="form-select" required>
+                                <option value="">Select schema...</option>
+                            </select>
+                            <small class="form-hint">Choose from schemas in selected database</small>
+                        </div>
 
-                    <div class="form-group">
-                        <label for="sfDatabase">Database *</label>
-                        <input type="text" id="sfDatabase" class="form-input" placeholder="e.g., TABLEAU_EXTENSIONS" required>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="sfSchema">Schema *</label>
-                        <input type="text" id="sfSchema" class="form-input" placeholder="e.g., COMMENTS_APP" required>
+                        <div class="step-actions">
+                            <button type="button" class="btn-secondary" id="backToStep1">
+                                <i class="fas fa-arrow-left"></i>
+                                Back to Authentication
+                            </button>
+                            <button type="button" class="btn-primary" id="createTablesBtn">
+                                <i class="fas fa-table"></i>
+                                Setup Tables & Connect
+                            </button>
+                        </div>
                     </div>
 
                     <div class="storage-options">
@@ -411,9 +448,9 @@
 
                     <div class="modal-actions">
                         <button type="button" class="btn-cancel" id="cancelSettingsBtn">Cancel</button>
-                        <button type="submit" class="btn-primary" id="connectBtn">
-                            <i class="fas fa-plug"></i>
-                            Test & Connect
+                        <button type="button" class="btn-primary" id="finalConnectBtn" style="display: none;">
+                            <i class="fas fa-check"></i>
+                            Complete Setup
                         </button>
                     </div>
                 </form>

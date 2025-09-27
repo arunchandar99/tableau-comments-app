@@ -166,6 +166,15 @@ export default async function handler(req, res) {
             case 'test-connection':
                 result = await testConnectionWithUserCredentials(body.credentials);
                 break;
+            case 'load-resources':
+                result = await loadSnowflakeResources(body.credentials);
+                break;
+            case 'load-schemas':
+                result = await loadSchemas(body.credentials);
+                break;
+            case 'setup-tables':
+                result = await setupTablesForUser(body.credentials);
+                break;
 
 
             case 'getSQL':
@@ -610,6 +619,300 @@ async function testConnectionWithUserCredentials(credentials) {
     }
 }
 
+// Load available Snowflake resources (databases, warehouses, etc.)
+async function loadSnowflakeResources(credentials) {
+    if (!credentials) {
+        return {
+            success: false,
+            message: 'No credentials provided',
+            timestamp: new Date().toISOString()
+        };
+    }
+
+    let resourceConnection = null;
+    try {
+        console.log('🔍 Loading Snowflake resources...');
+
+        // Create connection with user credentials
+        const userConfig = {
+            account: credentials.account,
+            username: credentials.username,
+            password: credentials.password,
+            warehouse: credentials.warehouse,
+            role: credentials.role || 'ACCOUNTADMIN'
+        };
+
+        // Create connection
+        resourceConnection = await new Promise((resolve, reject) => {
+            const conn = snowflake.createConnection(userConfig);
+            conn.connect((err, connection) => {
+                if (err) {
+                    console.error('❌ Resource loading connection failed:', err.message);
+                    reject(err);
+                } else {
+                    console.log('✅ Resource loading connection successful');
+                    resolve(connection);
+                }
+            });
+        });
+
+        // Load databases
+        const databases = await new Promise((resolve, reject) => {
+            resourceConnection.execute({
+                sqlText: 'SHOW DATABASES;',
+                complete: (err, stmt, rows) => {
+                    if (err) {
+                        reject(err);
+                    } else {
+                        const dbNames = rows.map(row => row.name);
+                        resolve(dbNames);
+                    }
+                }
+            });
+        });
+
+        // Load warehouses
+        const warehouses = await new Promise((resolve, reject) => {
+            resourceConnection.execute({
+                sqlText: 'SHOW WAREHOUSES;',
+                complete: (err, stmt, rows) => {
+                    if (err) {
+                        reject(err);
+                    } else {
+                        const whNames = rows.map(row => row.name);
+                        resolve(whNames);
+                    }
+                }
+            });
+        });
+
+        return {
+            success: true,
+            message: 'Resources loaded successfully',
+            timestamp: new Date().toISOString(),
+            resources: {
+                databases,
+                warehouses
+            }
+        };
+
+    } catch (error) {
+        console.error('❌ Resource loading error:', error.message);
+        return {
+            success: false,
+            message: 'Failed to load resources',
+            error: error.message,
+            timestamp: new Date().toISOString()
+        };
+    } finally {
+        if (resourceConnection) {
+            try {
+                resourceConnection.destroy();
+            } catch (closeError) {
+                console.warn('Warning: Failed to close resource connection:', closeError.message);
+            }
+        }
+    }
+}
+
+// Load schemas for a specific database
+async function loadSchemas(credentials) {
+    if (!credentials || !credentials.database) {
+        return {
+            success: false,
+            message: 'Database not specified',
+            timestamp: new Date().toISOString()
+        };
+    }
+
+    let schemaConnection = null;
+    try {
+        console.log(`🔍 Loading schemas for database: ${credentials.database}`);
+
+        // Create connection with user credentials and database
+        const userConfig = {
+            account: credentials.account,
+            username: credentials.username,
+            password: credentials.password,
+            database: credentials.database,
+            warehouse: credentials.warehouse,
+            role: credentials.role || 'ACCOUNTADMIN'
+        };
+
+        // Create connection
+        schemaConnection = await new Promise((resolve, reject) => {
+            const conn = snowflake.createConnection(userConfig);
+            conn.connect((err, connection) => {
+                if (err) {
+                    console.error('❌ Schema loading connection failed:', err.message);
+                    reject(err);
+                } else {
+                    console.log('✅ Schema loading connection successful');
+                    resolve(connection);
+                }
+            });
+        });
+
+        // Load schemas
+        const schemas = await new Promise((resolve, reject) => {
+            schemaConnection.execute({
+                sqlText: `SHOW SCHEMAS IN DATABASE ${credentials.database};`,
+                complete: (err, stmt, rows) => {
+                    if (err) {
+                        reject(err);
+                    } else {
+                        const schemaNames = rows.map(row => row.name);
+                        resolve(schemaNames);
+                    }
+                }
+            });
+        });
+
+        return {
+            success: true,
+            message: 'Schemas loaded successfully',
+            timestamp: new Date().toISOString(),
+            schemas
+        };
+
+    } catch (error) {
+        console.error('❌ Schema loading error:', error.message);
+        return {
+            success: false,
+            message: 'Failed to load schemas',
+            error: error.message,
+            timestamp: new Date().toISOString()
+        };
+    } finally {
+        if (schemaConnection) {
+            try {
+                schemaConnection.destroy();
+            } catch (closeError) {
+                console.warn('Warning: Failed to close schema connection:', closeError.message);
+            }
+        }
+    }
+}
+
+// Setup required tables for the user's database/schema
+async function setupTablesForUser(credentials) {
+    if (!credentials || !credentials.database || !credentials.schema) {
+        return {
+            success: false,
+            message: 'Database and schema are required',
+            timestamp: new Date().toISOString()
+        };
+    }
+
+    let setupConnection = null;
+    try {
+        console.log(`🛠️  Setting up tables in ${credentials.database}.${credentials.schema}`);
+
+        // Create connection with full user credentials
+        const userConfig = {
+            account: credentials.account,
+            username: credentials.username,
+            password: credentials.password,
+            database: credentials.database,
+            schema: credentials.schema,
+            warehouse: credentials.warehouse,
+            role: credentials.role || 'ACCOUNTADMIN'
+        };
+
+        // Create connection
+        setupConnection = await new Promise((resolve, reject) => {
+            const conn = snowflake.createConnection(userConfig);
+            conn.connect((err, connection) => {
+                if (err) {
+                    console.error('❌ Table setup connection failed:', err.message);
+                    reject(err);
+                } else {
+                    console.log('✅ Table setup connection successful');
+                    resolve(connection);
+                }
+            });
+        });
+
+        // Create POSTS table
+        await new Promise((resolve, reject) => {
+            setupConnection.execute({
+                sqlText: `
+                    CREATE TABLE IF NOT EXISTS POSTS (
+                        ID VARCHAR(255) PRIMARY KEY,
+                        POST_TYPE VARCHAR(100),
+                        METRIC_VALUE VARCHAR(255),
+                        METRIC_LABEL VARCHAR(255),
+                        CONTENT TEXT,
+                        AUTHOR VARCHAR(255),
+                        TIMESTAMP_MS BIGINT,
+                        LIKES INTEGER DEFAULT 0,
+                        CREATED_AT TIMESTAMP DEFAULT CURRENT_TIMESTAMP()
+                    );
+                `,
+                complete: (err, stmt, rows) => {
+                    if (err) {
+                        reject(err);
+                    } else {
+                        console.log('✅ POSTS table created/verified');
+                        resolve(rows);
+                    }
+                }
+            });
+        });
+
+        // Create COMMENTS table
+        await new Promise((resolve, reject) => {
+            setupConnection.execute({
+                sqlText: `
+                    CREATE TABLE IF NOT EXISTS COMMENTS (
+                        ID VARCHAR(255) PRIMARY KEY,
+                        POST_ID VARCHAR(255),
+                        CONTENT TEXT,
+                        AUTHOR VARCHAR(255),
+                        TIMESTAMP_MS BIGINT,
+                        CREATED_AT TIMESTAMP DEFAULT CURRENT_TIMESTAMP(),
+                        FOREIGN KEY (POST_ID) REFERENCES POSTS(ID)
+                    );
+                `,
+                complete: (err, stmt, rows) => {
+                    if (err) {
+                        reject(err);
+                    } else {
+                        console.log('✅ COMMENTS table created/verified');
+                        resolve(rows);
+                    }
+                }
+            });
+        });
+
+        return {
+            success: true,
+            message: 'Tables setup completed successfully',
+            timestamp: new Date().toISOString(),
+            database: credentials.database,
+            schema: credentials.schema,
+            tables: ['POSTS', 'COMMENTS']
+        };
+
+    } catch (error) {
+        console.error('❌ Table setup error:', error.message);
+        return {
+            success: false,
+            message: 'Failed to setup tables',
+            error: error.message,
+            timestamp: new Date().toISOString()
+        };
+    } finally {
+        if (setupConnection) {
+            try {
+                setupConnection.destroy();
+            } catch (closeError) {
+                console.warn('Warning: Failed to close setup connection:', closeError.message);
+            }
+        }
+    }
+}
+
 // Utility function to generate unique IDs
 function generateId() {
     return Date.now().toString(36) + Math.random().toString(36).substr(2, 9);
@@ -636,4 +939,144 @@ USE SCHEMA ${connectionConfig.schema};
     ).join('\n\n');
 
     return header + statements;
+}
+
+// Main API handler for Vercel serverless functions
+export default async function handler(req, res) {
+    // Set CORS headers
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+
+    // Handle preflight requests
+    if (req.method === 'OPTIONS') {
+        res.status(200).end();
+        return;
+    }
+
+    try {
+        const { action } = req.query;
+        let data = {};
+
+        // Parse request body for POST requests
+        if (req.method === 'POST' && req.body) {
+            data = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
+        }
+
+        console.log(`🔌 API Request: ${action}`, { method: req.method, hasData: !!data });
+
+        let result;
+
+        switch (action) {
+            case 'health':
+                result = await healthCheck();
+                break;
+
+            case 'test-connection':
+                if (!data.credentials) {
+                    result = { success: false, error: 'Credentials required for connection test' };
+                } else {
+                    result = await testConnectionWithUserCredentials(data.credentials);
+                }
+                break;
+
+            case 'load-resources':
+                if (!data.credentials) {
+                    result = { success: false, error: 'Credentials required for loading resources' };
+                } else {
+                    result = await loadSnowflakeResources(data.credentials);
+                }
+                break;
+
+            case 'load-schemas':
+                if (!data.credentials) {
+                    result = { success: false, error: 'Credentials required for loading schemas' };
+                } else {
+                    result = await loadSchemas(data.credentials);
+                }
+                break;
+
+            case 'setup-tables':
+                if (!data.credentials) {
+                    result = { success: false, error: 'Credentials required for table setup' };
+                } else {
+                    result = await setupTablesForUser(data.credentials);
+                }
+                break;
+
+            case 'savePosts':
+                if (!data.posts) {
+                    result = { success: false, error: 'Posts data required' };
+                } else {
+                    result = await savePosts(data.posts);
+                }
+                break;
+
+            case 'loadPosts':
+                result = await loadPosts();
+                break;
+
+            case 'deletePost':
+                if (!data.postId) {
+                    result = { success: false, error: 'Post ID required' };
+                } else {
+                    result = await deletePost(data.postId);
+                }
+                break;
+
+            case 'saveComment':
+                if (!data.postId || !data.comment) {
+                    result = { success: false, error: 'Post ID and comment data required' };
+                } else {
+                    result = await saveComment(data.postId, data.comment);
+                }
+                break;
+
+            case 'loadComments':
+                if (!data.postId) {
+                    result = { success: false, error: 'Post ID required' };
+                } else {
+                    result = await loadComments(data.postId);
+                }
+                break;
+
+            case 'deleteComment':
+                if (!data.commentId) {
+                    result = { success: false, error: 'Comment ID required' };
+                } else {
+                    result = await deleteComment(data.commentId);
+                }
+                break;
+
+            case 'getSQL':
+                result = {
+                    success: true,
+                    sql: generateBatchSQL(),
+                    statementCount: sqlStatements.length
+                };
+                break;
+
+            default:
+                result = {
+                    success: false,
+                    error: `Unknown action: ${action}`,
+                    availableActions: [
+                        'health', 'test-connection', 'load-resources', 'load-schemas', 'setup-tables',
+                        'savePosts', 'loadPosts', 'deletePost', 'saveComment', 'loadComments',
+                        'deleteComment', 'getSQL'
+                    ]
+                };
+        }
+
+        console.log(`✅ API Response: ${action}`, { success: result.success });
+        res.status(200).json(result);
+
+    } catch (error) {
+        console.error('❌ API Handler Error:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message,
+            timestamp: new Date().toISOString()
+        });
+    }
 }
