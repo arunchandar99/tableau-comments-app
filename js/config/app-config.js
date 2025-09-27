@@ -10,7 +10,7 @@ export const APP_CONFIG = {
 
     // API Configuration
     api: {
-        snowflakeBaseUrl: 'https://comments-9dmmcepk7-arun-chandars-projects.vercel.app/api/snowflake',
+        snowflakeBaseUrl: 'https://comments-dbo0lmk9n-arun-chandars-projects.vercel.app/api/snowflake',
         timeout: 30000, // 30 seconds
         retryAttempts: 3
     },
