@@ -1532,8 +1532,7 @@ body {
     }
 }
 
-/* Header Indicators (Settings, Filters) */
-.settings-indicator,
+/* Filters Indicator (in header) */
 .filters-indicator {
     display: flex;
     align-items: center;
@@ -1548,214 +1547,17 @@ body {
     margin-right: 12px;
 }
 
-.settings-indicator:hover,
 .filters-indicator:hover {
     background: rgba(255, 255, 255, 0.2);
 }
 
-.settings-arrow,
 .filters-arrow {
     transition: transform 0.3s ease;
     font-size: 12px;
 }
 
-.settings-arrow.rotated,
 .filters-arrow.rotated {
     transform: rotate(180deg);
-}
-
-/* Settings Modal Specific Styles */
-.connection-status {
-    padding: 16px;
-    margin-bottom: 24px;
-    border-radius: 8px;
-    background: #f8f9fa;
-    border-left: 4px solid #17a2b8;
-}
-
-.connection-status.success {
-    background: #d4edda;
-    border-left-color: #28a745;
-    color: #155724;
-}
-
-.connection-status.error {
-    background: #f8d7da;
-    border-left-color: #dc3545;
-    color: #721c24;
-}
-
-.status-message {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 14px;
-}
-
-.form-hint {
-    font-size: 12px;
-    color: #6c757d;
-    margin-top: 4px;
-    display: block;
-}
-
-.storage-options {
-    margin: 24px 0;
-    padding: 16px;
-    background: #f8f9fa;
-    border-radius: 8px;
-    border: 1px solid #e9ecef;
-}
-
-.storage-options h4 {
-    margin: 0 0 12px 0;
-    font-size: 14px;
-    font-weight: 600;
-    color: #495057;
-}
-
-.radio-group {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-}
-
-.radio-label {
-    display: flex;
-    align-items: flex-start;
-    gap: 8px;
-    cursor: pointer;
-    font-size: 14px;
-    line-height: 1.4;
-}
-
-.radio-label input[type="radio"] {
-    display: none;
-}
-
-.radio-custom {
-    width: 18px;
-    height: 18px;
-    border: 2px solid #dee2e6;
-    border-radius: 50%;
-    position: relative;
-    flex-shrink: 0;
-    margin-top: 2px;
-    transition: all 0.2s ease;
-}
-
-.radio-label input[type="radio"]:checked + .radio-custom {
-    border-color: var(--accent-color);
-    background: var(--accent-color);
-}
-
-.radio-label input[type="radio"]:checked + .radio-custom::after {
-    content: '';
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    width: 6px;
-    height: 6px;
-    background: white;
-    border-radius: 50%;
-}
-
-.settings-footer {
-    margin-top: 24px;
-    padding-top: 16px;
-    border-top: 1px solid #e9ecef;
-}
-
-.security-note {
-    display: flex;
-    align-items: flex-start;
-    gap: 8px;
-    font-size: 12px;
-    color: #6c757d;
-    line-height: 1.4;
-}
-
-.security-note i {
-    color: #28a745;
-    margin-top: 2px;
-    flex-shrink: 0;
-}
-
-/* Multi-Step Connection Wizard */
-.connection-step {
-    padding: 20px;
-    border: 2px solid #e9ecef;
-    border-radius: 8px;
-    margin-bottom: 16px;
-    transition: all 0.3s ease;
-}
-
-.connection-step.active {
-    border-color: var(--accent-color);
-    background: rgba(102, 126, 234, 0.05);
-}
-
-.connection-step h4 {
-    margin: 0 0 16px 0;
-    color: var(--accent-color);
-    font-size: 16px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.step-actions {
-    display: flex;
-    gap: 12px;
-    justify-content: space-between;
-    margin-top: 20px;
-}
-
-.btn-secondary {
-    background: #6c757d;
-    color: white;
-    border: none;
-    padding: 10px 16px;
-    border-radius: 6px;
-    cursor: pointer;
-    font-size: 14px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    transition: all 0.2s ease;
-}
-
-.btn-secondary:hover {
-    background: #5a6268;
-    transform: translateY(-1px);
-}
-
-.form-select {
-    width: 100%;
-    padding: 10px 12px;
-    border: 1px solid #dee2e6;
-    border-radius: 6px;
-    font-size: 14px;
-    background: white;
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
-
-.form-select:focus {
-    outline: none;
-    border-color: var(--accent-color);
-    box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.2);
-}
-
-.form-select option[value="loading"] {
-    color: #6c757d;
-    font-style: italic;
-}
-
-.connection-step:not(.active) {
-    opacity: 0.6;
-    pointer-events: none;
 }
 
 /* Results Header */

@@ -1,455 +1,371 @@
 /**
  * Settings Component
- * Handles Snowflake connection settings and configuration
+ * Handles settings panel UI and theme customization
  */
 
 import { APP_CONFIG } from '../config/app-config.js';
 import { logger } from '../utils/logger.js';
+import { themeEngine } from '../utils/theme-engine.js';
 import { showNotification } from '../utils/helpers.js';
 
 export class SettingsComponent {
-    constructor(snowflakeService) {
-        this.snowflakeService = snowflakeService;
+    constructor() {
         this.isSettingsOpen = false;
-        this.connectionTesting = false;
+        this.previewTimeout = null;
         this.setupEventListeners();
     }
 
     /**
-     * Toggle settings modal
+     * Create settings tab in the header
      */
-    toggleSettings() {
+    createSettingsTab() {
         try {
-            const settingsModal = document.getElementById('settingsModal');
-            const settingsArrow = document.getElementById('settingsArrow');
-
-            if (!settingsModal || !settingsArrow) {
-                logger.warn('Settings elements not found');
+            const headerRight = document.querySelector('.header-right');
+            if (!headerRight) {
+                logger.error('Header right container not found');
                 return;
             }
 
-            const isVisible = settingsModal.style.display !== 'none';
+            // Create settings button
+            const settingsBtn = document.createElement('button');
+            settingsBtn.id = 'settingsBtn';
+            settingsBtn.className = 'settings-btn';
+            settingsBtn.innerHTML = '<i class="fas fa-cog"></i><span>Settings</span>';
+            settingsBtn.title = 'Customize app appearance';
 
-            if (isVisible) {
-                settingsModal.style.display = 'none';
-                settingsArrow.classList.remove('rotated');
-                this.isSettingsOpen = false;
-                logger.debug('Settings modal hidden');
-            } else {
-                settingsModal.style.display = 'flex';
-                settingsArrow.classList.add('rotated');
+            // Insert before the new post button
+            const newPostBtn = document.getElementById('newPostBtn');
+            headerRight.insertBefore(settingsBtn, newPostBtn);
+
+            logger.success('Settings tab created');
+        } catch (error) {
+            logger.error('Failed to create settings tab:', error);
+        }
+    }
+
+    /**
+     * Create settings modal
+     */
+    createSettingsModal() {
+        try {
+            // Create modal HTML
+            const modalHtml = `
+                <div class="modal-overlay" id="settingsModal">
+                    <div class="modal-container settings-modal">
+                        <div class="modal-header">
+                            <h2><i class="fas fa-cog"></i> Settings & Appearance</h2>
+                            <button class="close-modal-btn" id="closeSettingsBtn">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+
+                        <div class="modal-body settings-body">
+                            <!-- Theme Selection Section -->
+                            <div class="settings-section">
+                                <h3><i class="fas fa-palette"></i> Theme</h3>
+                                <p class="section-description">Choose a theme that matches your style</p>
+
+                                <div class="theme-grid" id="themeGrid">
+                                    <!-- Theme options will be inserted here -->
+                                </div>
+                            </div>
+
+                            <!-- Appearance Settings Section -->
+                            <div class="settings-section">
+                                <h3><i class="fas fa-adjust"></i> Appearance</h3>
+                                <p class="section-description">Fine-tune the visual appearance</p>
+
+                                <div class="settings-grid">
+                                    <!-- Font Size -->
+                                    <div class="setting-item">
+                                        <label for="fontSizeSetting">
+                                            <i class="fas fa-font"></i>
+                                            Font Size
+                                        </label>
+                                        <select id="fontSizeSetting" class="setting-select">
+                                            <!-- Options will be populated -->
+                                        </select>
+                                    </div>
+
+                                    <!-- Animation Speed -->
+                                    <div class="setting-item">
+                                        <label for="animationSetting">
+                                            <i class="fas fa-magic"></i>
+                                            Animations
+                                        </label>
+                                        <select id="animationSetting" class="setting-select">
+                                            <!-- Options will be populated -->
+                                        </select>
+                                    </div>
+
+                                    <!-- Card Style -->
+                                    <div class="setting-item">
+                                        <label for="cardStyleSetting">
+                                            <i class="fas fa-border-style"></i>
+                                            Card Style
+                                        </label>
+                                        <select id="cardStyleSetting" class="setting-select">
+                                            <!-- Options will be populated -->
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Preview Section -->
+                            <div class="settings-section">
+                                <h3><i class="fas fa-eye"></i> Preview</h3>
+                                <p class="section-description">See how your changes look</p>
+
+                                <div class="theme-preview-card">
+                                    <div class="preview-header">
+                                        <div class="preview-title">Sample Post</div>
+                                        <div class="preview-time">2 hours ago</div>
+                                    </div>
+                                    <div class="preview-content">
+                                        This is how your posts will look with the selected theme and settings.
+                                    </div>
+                                    <div class="preview-actions">
+                                        <button class="preview-btn"><i class="fas fa-heart"></i> 5</button>
+                                        <button class="preview-btn"><i class="fas fa-comment"></i> 2</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="modal-actions settings-actions">
+                            <button type="button" class="btn-secondary" id="resetSettingsBtn">
+                                <i class="fas fa-undo"></i>
+                                Reset to Defaults
+                            </button>
+                            <div class="action-group">
+                                <button type="button" class="btn-cancel" id="cancelSettingsBtn">Cancel</button>
+                                <button type="button" class="btn-primary" id="saveSettingsBtn">
+                                    <i class="fas fa-save"></i>
+                                    Save Settings
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Insert modal into body
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+
+            // Populate options
+            this.populateThemeOptions();
+            this.populateAppearanceOptions();
+
+            logger.success('Settings modal created');
+        } catch (error) {
+            logger.error('Failed to create settings modal:', error);
+        }
+    }
+
+    /**
+     * Populate theme options
+     */
+    populateThemeOptions() {
+        try {
+            const themeGrid = document.getElementById('themeGrid');
+            if (!themeGrid) return;
+
+            const themes = themeEngine.getAvailableThemes();
+            const currentTheme = themeEngine.getCurrentTheme();
+
+            themeGrid.innerHTML = themes.map(theme => `
+                <div class="theme-option ${theme.id === currentTheme.id ? 'active' : ''}" data-theme="${theme.id}">
+                    <div class="theme-preview" style="background: ${theme.preview.headerGradient}">
+                        <div class="theme-preview-content" style="background: ${theme.preview.cardBackground}; color: ${theme.preview.headerGradient}">
+                            <div class="theme-preview-dot" style="background: ${theme.preview.accentColor}"></div>
+                        </div>
+                    </div>
+                    <div class="theme-info">
+                        <h4>${theme.name}</h4>
+                        <p>${theme.description}</p>
+                    </div>
+                    <div class="theme-select-indicator">
+                        <i class="fas fa-check-circle"></i>
+                    </div>
+                </div>
+            `).join('');
+
+            logger.debug('Theme options populated');
+        } catch (error) {
+            logger.error('Failed to populate theme options:', error);
+        }
+    }
+
+    /**
+     * Populate appearance options
+     */
+    populateAppearanceOptions() {
+        try {
+            const options = themeEngine.getAppearanceOptions();
+            const currentSettings = themeEngine.getCurrentSettings();
+
+            // Font Size options
+            const fontSizeSelect = document.getElementById('fontSizeSetting');
+            if (fontSizeSelect) {
+                fontSizeSelect.innerHTML = options.fontSize.map(option =>
+                    `<option value="${option.id}" ${option.id === currentSettings.fontSize ? 'selected' : ''}>${option.name}</option>`
+                ).join('');
+            }
+
+            // Animation options
+            const animationSelect = document.getElementById('animationSetting');
+            if (animationSelect) {
+                animationSelect.innerHTML = options.animations.map(option =>
+                    `<option value="${option.id}" ${option.id === currentSettings.animations ? 'selected' : ''}>${option.name}</option>`
+                ).join('');
+            }
+
+            // Card Style options
+            const cardStyleSelect = document.getElementById('cardStyleSetting');
+            if (cardStyleSelect) {
+                cardStyleSelect.innerHTML = options.cardStyle.map(option =>
+                    `<option value="${option.id}" ${option.id === currentSettings.cardStyle ? 'selected' : ''}>${option.name}</option>`
+                ).join('');
+            }
+
+            logger.debug('Appearance options populated');
+        } catch (error) {
+            logger.error('Failed to populate appearance options:', error);
+        }
+    }
+
+    /**
+     * Show settings modal
+     */
+    showSettings() {
+        try {
+            if (!document.getElementById('settingsModal')) {
+                this.createSettingsModal();
+            }
+
+            const modal = document.getElementById('settingsModal');
+            if (modal) {
+                modal.style.display = 'flex';
                 this.isSettingsOpen = true;
-                this.loadSavedCredentials();
+
+                // Refresh options in case they've changed
+                this.populateThemeOptions();
+                this.populateAppearanceOptions();
+
                 logger.debug('Settings modal shown');
             }
         } catch (error) {
-            logger.error('Failed to toggle settings:', error);
+            logger.error('Failed to show settings modal:', error);
         }
     }
 
     /**
-     * Load saved credentials into form
+     * Hide settings modal
      */
-    loadSavedCredentials() {
+    hideSettings() {
         try {
-            const credentials = this.getStoredCredentials();
-            if (credentials) {
-                document.getElementById('sfAccount').value = credentials.account || '';
-                document.getElementById('sfUsername').value = credentials.username || '';
-                document.getElementById('sfPassword').value = ''; // Never populate password
-                document.getElementById('sfWarehouse').value = credentials.warehouse || '';
-                document.getElementById('sfDatabase').value = credentials.database || '';
-                document.getElementById('sfSchema').value = credentials.schema || '';
+            const modal = document.getElementById('settingsModal');
+            if (modal) {
+                modal.style.display = 'none';
+                this.isSettingsOpen = false;
 
-                // Set storage type radio
-                const storageType = credentials.storageType || 'session';
-                document.querySelector(`input[name="storageType"][value="${storageType}"]`).checked = true;
-
-                // Update connection status
-                this.updateConnectionStatus('info', 'Saved credentials loaded. Click "Test & Connect" to verify.');
-                logger.debug('Saved credentials loaded');
-            } else {
-                this.updateConnectionStatus('info', 'Configure your Snowflake connection to enable data storage');
-            }
-        } catch (error) {
-            logger.error('Failed to load saved credentials:', error);
-        }
-    }
-
-    /**
-     * Get stored credentials from browser storage
-     */
-    getStoredCredentials() {
-        try {
-            // Try sessionStorage first, then localStorage
-            let credentials = JSON.parse(sessionStorage.getItem('snowflake_credentials'));
-            if (!credentials) {
-                credentials = JSON.parse(localStorage.getItem('snowflake_credentials'));
-            }
-            return credentials;
-        } catch (error) {
-            logger.error('Failed to get stored credentials:', error);
-            return null;
-        }
-    }
-
-    /**
-     * Store credentials securely
-     */
-    storeCredentials(credentials, storageType = 'session') {
-        try {
-            const dataToStore = {
-                ...credentials,
-                storageType,
-                timestamp: Date.now()
-            };
-
-            if (storageType === 'persistent') {
-                localStorage.setItem('snowflake_credentials', JSON.stringify(dataToStore));
-                sessionStorage.removeItem('snowflake_credentials');
-            } else {
-                sessionStorage.setItem('snowflake_credentials', JSON.stringify(dataToStore));
-                localStorage.removeItem('snowflake_credentials');
-            }
-
-            logger.debug('Credentials stored successfully');
-        } catch (error) {
-            logger.error('Failed to store credentials:', error);
-        }
-    }
-
-    /**
-     * Update connection status display
-     */
-    updateConnectionStatus(type, message) {
-        try {
-            const statusDiv = document.getElementById('connectionStatus');
-            const messageDiv = document.getElementById('connectionMessage');
-
-            if (statusDiv && messageDiv) {
-                // Remove all status classes
-                statusDiv.classList.remove('success', 'error', 'info');
-                statusDiv.classList.add(type);
-
-                // Update icon and message
-                const iconClass = {
-                    success: 'fa-check-circle',
-                    error: 'fa-exclamation-circle',
-                    info: 'fa-info-circle'
-                };
-
-                messageDiv.innerHTML = `<i class="fas ${iconClass[type]}"></i> ${message}`;
-            }
-        } catch (error) {
-            logger.error('Failed to update connection status:', error);
-        }
-    }
-
-    /**
-     * Test Snowflake connection
-     */
-    async testConnection(credentials) {
-        try {
-            this.connectionTesting = true;
-            this.updateConnectionStatus('info', 'Testing connection...');
-
-            // Update button state
-            const connectBtn = document.getElementById('connectBtn');
-            if (connectBtn) {
-                connectBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Testing...';
-                connectBtn.disabled = true;
-            }
-
-            // Initialize snowflake service with new credentials
-            const isConnected = await this.snowflakeService.initializeWithCredentials(credentials);
-
-            if (isConnected) {
-                this.updateConnectionStatus('success', 'Connection successful! Snowflake is ready for data storage.');
-                showNotification('Connected to Snowflake successfully!', 'success');
-                logger.success('Snowflake connection test successful');
-
-                // Update global status indicator
-                if (window.statusComponent) {
-                    window.statusComponent.updateConnectionStatus('Connected to Snowflake', 'connected');
+                // Clear any preview timeouts
+                if (this.previewTimeout) {
+                    clearTimeout(this.previewTimeout);
+                    this.previewTimeout = null;
                 }
 
-                return true;
-            } else {
-                this.updateConnectionStatus('error', 'Connection failed. Please check your credentials and try again.');
-                showNotification('Snowflake connection failed', 'error');
-                logger.error('Snowflake connection test failed');
-                return false;
+                logger.debug('Settings modal hidden');
             }
         } catch (error) {
-            logger.error('Connection test error:', error);
-            this.updateConnectionStatus('error', `Connection error: ${error.message}`);
-            showNotification('Connection test failed', 'error');
-            return false;
-        } finally {
-            this.connectionTesting = false;
-
-            // Reset button state
-            const connectBtn = document.getElementById('connectBtn');
-            if (connectBtn) {
-                connectBtn.innerHTML = '<i class="fas fa-plug"></i> Test & Connect';
-                connectBtn.disabled = false;
-            }
+            logger.error('Failed to hide settings modal:', error);
         }
     }
 
     /**
-     * Handle Step 1: Authentication
+     * Handle theme selection
      */
-    async handleAuthentication() {
+    handleThemeSelect(themeId) {
         try {
-            // Get basic auth data
-            const authData = {
-                account: document.getElementById('sfAccount').value.trim(),
-                username: document.getElementById('sfUsername').value.trim(),
-                password: document.getElementById('sfPassword').value,
-                warehouse: document.getElementById('sfWarehouse').value.trim()
+            // Update UI
+            document.querySelectorAll('.theme-option').forEach(option => {
+                option.classList.remove('active');
+            });
+            document.querySelector(`[data-theme="${themeId}"]`)?.classList.add('active');
+
+            // Preview theme immediately
+            themeEngine.previewTheme(themeId);
+
+            logger.debug('Theme selected for preview:', themeId);
+        } catch (error) {
+            logger.error('Failed to handle theme selection:', error);
+        }
+    }
+
+    /**
+     * Handle appearance setting change
+     */
+    handleAppearanceChange() {
+        try {
+            const settings = {
+                fontSize: document.getElementById('fontSizeSetting')?.value,
+                animations: document.getElementById('animationSetting')?.value,
+                cardStyle: document.getElementById('cardStyleSetting')?.value
             };
 
-            // Validate required fields
-            const requiredFields = ['account', 'username', 'password', 'warehouse'];
-            const missingFields = requiredFields.filter(field => !authData[field]);
+            // Apply preview immediately
+            themeEngine.applySettings(settings);
 
-            if (missingFields.length > 0) {
-                this.updateConnectionStatus('error', `Please fill in: ${missingFields.join(', ')}`);
-                return;
-            }
-
-            this.updateConnectionStatus('info', 'Authenticating and loading resources...');
-
-            // Update button state
-            const authBtn = document.getElementById('authenticateBtn');
-            authBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Authenticating...';
-            authBtn.disabled = true;
-
-            // Test authentication and load resources
-            const result = await this.authenticateAndLoadResources(authData);
-
-            if (result.success) {
-                // Store auth data temporarily
-                this.tempAuthData = authData;
-
-                // Populate dropdowns
-                this.populateResourceDropdowns(result.resources);
-
-                // Move to step 2
-                this.showStep(2);
-
-                this.updateConnectionStatus('success', 'Authentication successful! Please select database and schema.');
-            } else {
-                this.updateConnectionStatus('error', `Authentication failed: ${result.error}`);
-            }
+            logger.debug('Appearance settings changed:', settings);
         } catch (error) {
-            logger.error('Authentication failed:', error);
-            this.updateConnectionStatus('error', 'Authentication failed. Please check your credentials.');
-        } finally {
-            // Reset button
-            const authBtn = document.getElementById('authenticateBtn');
-            authBtn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Authenticate & Load Resources';
-            authBtn.disabled = false;
+            logger.error('Failed to handle appearance change:', error);
         }
     }
 
     /**
-     * Authenticate and load available resources
+     * Save settings
      */
-    async authenticateAndLoadResources(authData) {
+    saveSettings() {
         try {
-            const response = await this.snowflakeService.apiCall('load-resources', 'POST', {
-                credentials: authData
-            });
-            return response;
-        } catch (error) {
-            return { success: false, error: error.message };
-        }
-    }
+            const selectedTheme = document.querySelector('.theme-option.active')?.dataset.theme;
 
-    /**
-     * Populate resource dropdowns
-     */
-    populateResourceDropdowns(resources) {
-        try {
-            // Populate databases
-            const dbSelect = document.getElementById('sfDatabase');
-            dbSelect.innerHTML = '<option value="">Select database...</option>';
-            resources.databases.forEach(db => {
-                dbSelect.innerHTML += `<option value="${db}">${db}</option>`;
-            });
-
-            // Populate warehouses (update the warehouse dropdown too)
-            const whSelect = document.getElementById('sfWarehouse');
-            if (resources.warehouses && resources.warehouses.length > 0) {
-                whSelect.innerHTML = '<option value="">Select warehouse...</option>';
-                resources.warehouses.forEach(wh => {
-                    whSelect.innerHTML += `<option value="${wh}">${wh}</option>`;
-                });
-                // Select the current warehouse
-                whSelect.value = this.tempAuthData.warehouse;
+            if (selectedTheme) {
+                themeEngine.applyTheme(selectedTheme);
             }
 
-            // Setup database change handler
-            dbSelect.addEventListener('change', (e) => {
-                this.loadSchemas(e.target.value);
-            });
-
-            logger.debug('Resource dropdowns populated');
-        } catch (error) {
-            logger.error('Failed to populate dropdowns:', error);
-        }
-    }
-
-    /**
-     * Load schemas for selected database
-     */
-    async loadSchemas(database) {
-        try {
-            if (!database) {
-                const schemaSelect = document.getElementById('sfSchema');
-                schemaSelect.innerHTML = '<option value="">Select schema...</option>';
-                return;
-            }
-
-            const schemaSelect = document.getElementById('sfSchema');
-            schemaSelect.innerHTML = '<option value="">Loading schemas...</option>';
-
-            const result = await this.snowflakeService.apiCall('load-schemas', 'POST', {
-                credentials: { ...this.tempAuthData, database }
-            });
-
-            if (result.success) {
-                schemaSelect.innerHTML = '<option value="">Select schema...</option>';
-                result.schemas.forEach(schema => {
-                    schemaSelect.innerHTML += `<option value="${schema}">${schema}</option>`;
-                });
-            } else {
-                schemaSelect.innerHTML = '<option value="">Failed to load schemas</option>';
-            }
-        } catch (error) {
-            logger.error('Failed to load schemas:', error);
-            const schemaSelect = document.getElementById('sfSchema');
-            schemaSelect.innerHTML = '<option value="">Error loading schemas</option>';
-        }
-    }
-
-    /**
-     * Show specific step
-     */
-    showStep(stepNumber) {
-        try {
-            // Hide all steps
-            document.querySelectorAll('.connection-step').forEach(step => {
-                step.style.display = 'none';
-                step.classList.remove('active');
-            });
-
-            // Show target step
-            const targetStep = document.getElementById(`step${stepNumber}`);
-            if (targetStep) {
-                targetStep.style.display = 'block';
-                targetStep.classList.add('active');
-            }
-
-            // Show/hide final connect button
-            const finalBtn = document.getElementById('finalConnectBtn');
-            if (finalBtn) {
-                finalBtn.style.display = stepNumber === 2 ? 'block' : 'none';
-            }
-
-            logger.debug(`Switched to step ${stepNumber}`);
-        } catch (error) {
-            logger.error('Failed to show step:', error);
-        }
-    }
-
-    /**
-     * Handle final connection setup
-     */
-    async handleFinalConnection() {
-        try {
-            const database = document.getElementById('sfDatabase').value;
-            const schema = document.getElementById('sfSchema').value;
-
-            if (!database || !schema) {
-                this.updateConnectionStatus('error', 'Please select both database and schema');
-                return;
-            }
-
-            // Complete credentials
-            const fullCredentials = {
-                ...this.tempAuthData,
-                database,
-                schema
+            const settings = {
+                fontSize: document.getElementById('fontSizeSetting')?.value,
+                animations: document.getElementById('animationSetting')?.value,
+                cardStyle: document.getElementById('cardStyleSetting')?.value
             };
 
-            this.updateConnectionStatus('info', 'Setting up tables and finalizing connection...');
+            themeEngine.applySettings(settings);
 
-            // Update button state
-            const finalBtn = document.getElementById('finalConnectBtn');
-            finalBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Setting up...';
-            finalBtn.disabled = true;
+            this.hideSettings();
+            showNotification('Settings saved successfully!', 'success');
 
-            // Test full connection and setup tables
-            const result = await this.snowflakeService.apiCall('setup-tables', 'POST', {
-                credentials: fullCredentials
-            });
-
-            if (result.success) {
-                // Initialize service with new credentials
-                await this.snowflakeService.initializeWithCredentials(fullCredentials);
-
-                // Store credentials
-                const storageType = document.querySelector('input[name="storageType"]:checked').value;
-                const credentialsToStore = { ...fullCredentials };
-                delete credentialsToStore.password;
-                this.storeCredentials(credentialsToStore, storageType);
-
-                this.updateConnectionStatus('success', 'Connection established! Tables are ready for use.');
-
-                // Update global status
-                if (window.statusComponent) {
-                    window.statusComponent.updateConnectionStatus('Connected to Snowflake', 'connected');
-                }
-
-                // Close modal after success
-                setTimeout(() => {
-                    this.toggleSettings();
-                }, 2000);
-
-            } else {
-                this.updateConnectionStatus('error', `Setup failed: ${result.error}`);
-            }
+            logger.success('Settings saved');
         } catch (error) {
-            logger.error('Final connection failed:', error);
-            this.updateConnectionStatus('error', 'Connection setup failed');
-        } finally {
-            // Reset button
-            const finalBtn = document.getElementById('finalConnectBtn');
-            finalBtn.innerHTML = '<i class="fas fa-check"></i> Complete Setup';
-            finalBtn.disabled = false;
+            logger.error('Failed to save settings:', error);
+            showNotification('Failed to save settings', 'error');
         }
     }
 
     /**
-     * Clear stored credentials
+     * Reset to defaults
      */
-    clearStoredCredentials() {
+    resetToDefaults() {
         try {
-            sessionStorage.removeItem('snowflake_credentials');
-            localStorage.removeItem('snowflake_credentials');
-
-            // Reset form
-            document.getElementById('snowflakeConnectionForm').reset();
-
-            this.updateConnectionStatus('info', 'Credentials cleared. Configure your Snowflake connection to enable data storage.');
-            showNotification('Credentials cleared successfully', 'success');
-
-            logger.debug('Stored credentials cleared');
+            if (confirm('Are you sure you want to reset all settings to defaults?')) {
+                themeEngine.resetToDefaults();
+                this.populateThemeOptions();
+                this.populateAppearanceOptions();
+                showNotification('Settings reset to defaults', 'success');
+                logger.success('Settings reset to defaults');
+            }
         } catch (error) {
-            logger.error('Failed to clear stored credentials:', error);
+            logger.error('Failed to reset settings:', error);
+            showNotification('Failed to reset settings', 'error');
         }
     }
 
@@ -457,37 +373,48 @@ export class SettingsComponent {
      * Setup event listeners
      */
     setupEventListeners() {
-        try {
-            // Settings modal events
-            document.addEventListener('click', (e) => {
+        // Create settings tab immediately since DOM is already loaded when component is instantiated
+        this.createSettingsTab();
+
+        // Settings button click
+        const settingsBtn = document.getElementById('settingsBtn');
+        if (settingsBtn) {
+            settingsBtn.addEventListener('click', () => this.showSettings());
+        }
+
+        // Settings modal events
+        document.addEventListener('click', (e) => {
                 // Close modal
                 if (e.target.matches('#closeSettingsBtn, #cancelSettingsBtn')) {
-                    this.toggleSettings();
+                    this.hideSettings();
+                }
+
+                // Save settings
+                if (e.target.matches('#saveSettingsBtn')) {
+                    this.saveSettings();
+                }
+
+                // Reset settings
+                if (e.target.matches('#resetSettingsBtn')) {
+                    this.resetToDefaults();
+                }
+
+                // Theme selection
+                if (e.target.closest('.theme-option')) {
+                    const themeId = e.target.closest('.theme-option').dataset.theme;
+                    this.handleThemeSelect(themeId);
                 }
 
                 // Close modal when clicking overlay
                 if (e.target.matches('#settingsModal')) {
-                    this.toggleSettings();
+                    this.hideSettings();
                 }
+            });
 
-                // Step 1: Authentication
-                if (e.target.matches('#authenticateBtn')) {
-                    this.handleAuthentication();
-                }
-
-                // Step 2: Back to step 1
-                if (e.target.matches('#backToStep1')) {
-                    this.showStep(1);
-                }
-
-                // Step 2: Create tables and connect
-                if (e.target.matches('#createTablesBtn')) {
-                    this.handleFinalConnection();
-                }
-
-                // Final connect button
-                if (e.target.matches('#finalConnectBtn')) {
-                    this.handleFinalConnection();
+            // Appearance setting changes
+            document.addEventListener('change', (e) => {
+                if (e.target.matches('#fontSizeSetting, #animationSetting, #cardStyleSetting')) {
+                    this.handleAppearanceChange();
                 }
             });
 
@@ -495,34 +422,16 @@ export class SettingsComponent {
             document.addEventListener('keydown', (e) => {
                 // Close settings with Escape
                 if (e.key === 'Escape' && this.isSettingsOpen) {
-                    this.toggleSettings();
+                    this.hideSettings();
                 }
-            });
 
-            logger.debug('Settings component event listeners setup');
-        } catch (error) {
-            logger.error('Failed to setup event listeners:', error);
-        }
-    }
+                // Open settings with Ctrl+, (like many apps)
+                if (e.ctrlKey && e.key === ',') {
+                    e.preventDefault();
+                    this.showSettings();
+                }
+        });
 
-    /**
-     * Get connection status for other components
-     */
-    getConnectionStatus() {
-        try {
-            const credentials = this.getStoredCredentials();
-            return {
-                hasCredentials: !!credentials,
-                isConnected: this.snowflakeService?.isConnected || false,
-                lastConnected: credentials?.timestamp || null
-            };
-        } catch (error) {
-            logger.error('Failed to get connection status:', error);
-            return {
-                hasCredentials: false,
-                isConnected: false,
-                lastConnected: null
-            };
-        }
+        logger.debug('Settings component event listeners setup');
     }
 }

@@ -45,39 +45,6 @@ class SnowflakeService {
         }
     }
 
-    /**
-     * Initialize connection with user-provided credentials
-     */
-    async initializeWithCredentials(credentials) {
-        try {
-            logger.info('Testing Snowflake connection with user credentials...');
-            const startTime = Date.now();
-
-            // Store credentials temporarily for this test
-            this.userCredentials = credentials;
-
-            const result = await this.testConnectionWithCredentials(credentials);
-            this.isConnected = result.success;
-
-            logger.performance('Snowflake credential test', startTime);
-
-            if (this.isConnected) {
-                logger.success('Snowflake connected with user credentials');
-                // Update the base URL to use user's account
-                this.baseURL = `https://${credentials.account}.snowflakecomputing.com/api/v2/statements`;
-            } else {
-                logger.warn('Snowflake connection failed with user credentials:', result.error);
-                this.userCredentials = null;
-            }
-
-            return this.isConnected;
-        } catch (error) {
-            logger.error('Snowflake credential initialization failed:', error);
-            this.isConnected = false;
-            this.userCredentials = null;
-            return false;
-        }
-    }
 
     /**
      * Perform health check on Snowflake API
@@ -91,25 +58,6 @@ class SnowflakeService {
         }
     }
 
-    /**
-     * Test connection with user credentials
-     */
-    async testConnectionWithCredentials(credentials) {
-        try {
-            logger.info('Testing connection with user credentials...');
-
-            // Create test request with credentials
-            const testPayload = {
-                credentials,
-                testQuery: 'SELECT CURRENT_VERSION();'
-            };
-
-            return await this.apiCall('test-connection', 'POST', testPayload);
-        } catch (error) {
-            logger.error('Credential test failed:', error);
-            return { success: false, error: error.message };
-        }
-    }
 
     /**
      * Save posts to Snowflake
