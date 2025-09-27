@@ -132,7 +132,7 @@ class CommentsApp {
             this.components.status = new StatusComponent(snowflakeService, storageService);
             this.components.post = new PostComponent(snowflakeService, storageService);
             this.components.comment = new CommentComponent(snowflakeService, this.components.post);
-            this.components.settings = new SettingsComponent();
+            this.components.settings = new SettingsComponent(snowflakeService);
 
             // Make components globally available for HTML onclick handlers
             window.postComponent = this.components.post;

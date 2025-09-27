@@ -163,6 +163,9 @@ export default async function handler(req, res) {
             case 'health':
                 result = await healthCheck();
                 break;
+            case 'test-connection':
+                result = await testConnectionWithUserCredentials(body.credentials);
+                break;
 
 
             case 'getSQL':
@@ -522,6 +525,88 @@ async function healthCheck() {
             error: error.message,
             timestamp: new Date().toISOString()
         };
+    }
+}
+
+// Test connection with user-provided credentials
+async function testConnectionWithUserCredentials(credentials) {
+    if (!credentials) {
+        return {
+            success: false,
+            message: 'No credentials provided',
+            timestamp: new Date().toISOString()
+        };
+    }
+
+    let testConnection = null;
+    try {
+        console.log('🧪 Testing user credentials...');
+
+        // Create temporary connection with user credentials
+        const userConfig = {
+            account: credentials.account,
+            username: credentials.username,
+            password: credentials.password,
+            database: credentials.database,
+            schema: credentials.schema,
+            warehouse: credentials.warehouse,
+            role: credentials.role || 'ACCOUNTADMIN'
+        };
+
+        // Test connection
+        testConnection = await new Promise((resolve, reject) => {
+            const conn = snowflake.createConnection(userConfig);
+            conn.connect((err, connection) => {
+                if (err) {
+                    console.error('❌ User credential test failed:', err.message);
+                    reject(err);
+                } else {
+                    console.log('✅ User credentials test successful');
+                    resolve(connection);
+                }
+            });
+        });
+
+        // Test a simple query
+        await new Promise((resolve, reject) => {
+            testConnection.execute({
+                sqlText: 'SELECT CURRENT_VERSION();',
+                complete: (err, stmt, rows) => {
+                    if (err) {
+                        reject(err);
+                    } else {
+                        resolve(rows);
+                    }
+                }
+            });
+        });
+
+        return {
+            success: true,
+            message: 'User credentials verified successfully',
+            timestamp: new Date().toISOString(),
+            database: credentials.database,
+            schema: credentials.schema,
+            account: credentials.account
+        };
+
+    } catch (error) {
+        console.error('❌ User credential test error:', error.message);
+        return {
+            success: false,
+            message: 'Credential verification failed',
+            error: error.message,
+            timestamp: new Date().toISOString()
+        };
+    } finally {
+        // Always close the test connection
+        if (testConnection) {
+            try {
+                testConnection.destroy();
+            } catch (closeError) {
+                console.warn('Warning: Failed to close test connection:', closeError.message);
+            }
+        }
     }
 }
 

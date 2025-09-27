@@ -20,6 +20,11 @@
                     </h1>
                 </div>
                 <div class="header-right">
+                    <div class="settings-indicator" id="settingsIndicator" title="Click to configure Snowflake connection" onclick="window.settingsComponent && window.settingsComponent.toggleSettings()">
+                        <i class="fas fa-cog" id="settingsIcon"></i>
+                        <span class="settings-text">Settings</span>
+                        <i class="fas fa-chevron-down settings-arrow" id="settingsArrow"></i>
+                    </div>
                     <div class="filters-indicator" id="filtersIndicator" title="Click to view filters" onclick="window.commentsApp && window.commentsApp.toggleFilters()">
                         <i class="fas fa-filter" id="filtersIcon"></i>
                         <span class="filters-text">Filters</span>
@@ -332,6 +337,91 @@
                             <i class="fas fa-paper-plane"></i>
                             Post Comment
                         </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div class="modal-overlay" id="settingsModal">
+        <div class="modal-container">
+            <div class="modal-header">
+                <h2>Snowflake Connection Settings</h2>
+                <button class="close-modal-btn" id="closeSettingsBtn">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <div class="modal-body">
+                <div class="connection-status" id="connectionStatus">
+                    <div class="status-message" id="connectionMessage">
+                        <i class="fas fa-info-circle"></i>
+                        Configure your Snowflake connection to enable data storage
+                    </div>
+                </div>
+
+                <form id="snowflakeConnectionForm">
+                    <div class="form-group">
+                        <label for="sfAccount">Account *</label>
+                        <input type="text" id="sfAccount" class="form-input" placeholder="e.g., abc123.snowflakecomputing.com" required>
+                        <small class="form-hint">Your Snowflake account identifier</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="sfUsername">Username *</label>
+                        <input type="text" id="sfUsername" class="form-input" placeholder="Your Snowflake username" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="sfPassword">Password *</label>
+                        <input type="password" id="sfPassword" class="form-input" placeholder="Your Snowflake password" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="sfWarehouse">Warehouse *</label>
+                        <input type="text" id="sfWarehouse" class="form-input" placeholder="e.g., COMPUTE_WH" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="sfDatabase">Database *</label>
+                        <input type="text" id="sfDatabase" class="form-input" placeholder="e.g., TABLEAU_EXTENSIONS" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="sfSchema">Schema *</label>
+                        <input type="text" id="sfSchema" class="form-input" placeholder="e.g., COMMENTS_APP" required>
+                    </div>
+
+                    <div class="storage-options">
+                        <h4>Storage Options</h4>
+                        <div class="radio-group">
+                            <label class="radio-label">
+                                <input type="radio" name="storageType" value="session" checked>
+                                <span class="radio-custom"></span>
+                                Session only (more secure, credentials cleared when tab closes)
+                            </label>
+                            <label class="radio-label">
+                                <input type="radio" name="storageType" value="persistent">
+                                <span class="radio-custom"></span>
+                                Remember credentials (stored locally until manually cleared)
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="modal-actions">
+                        <button type="button" class="btn-cancel" id="cancelSettingsBtn">Cancel</button>
+                        <button type="submit" class="btn-primary" id="connectBtn">
+                            <i class="fas fa-plug"></i>
+                            Test & Connect
+                        </button>
+                    </div>
+                </form>
+
+                <div class="settings-footer">
+                    <div class="security-note">
+                        <i class="fas fa-shield-alt"></i>
+                        <span>Your credentials are encrypted and stored locally. They are never sent to external servers except for direct Snowflake authentication.</span>
                     </div>
                 </div>
             </div>
