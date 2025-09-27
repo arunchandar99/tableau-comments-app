@@ -76,13 +76,18 @@ export class PostComponent {
 
             // Try loading from Snowflake first
             let snowflakePosts = [];
-            if (this.snowflakeService.isConnected) {
+            let snowflakeConnectionWorks = this.snowflakeService.isConnected;
+
+            if (snowflakeConnectionWorks) {
                 try {
                     snowflakePosts = await this.snowflakeService.loadPosts();
                     logger.info(`Snowflake returned ${snowflakePosts.length} posts`);
+                    // Check if connection status changed during the call
+                    snowflakeConnectionWorks = this.snowflakeService.isConnected;
                 } catch (snowflakeError) {
                     logger.warn('Snowflake load failed:', snowflakeError);
                     snowflakePosts = [];
+                    snowflakeConnectionWorks = false;
                 }
             } else {
                 logger.info('Snowflake not connected, skipping database load');
@@ -93,7 +98,7 @@ export class PostComponent {
             logger.info(`Local storage has ${localPosts.length} posts`);
 
             // Choose data source priority: Snowflake > Local Storage > Sample Data (only if no connection)
-            if (this.snowflakeService.isConnected) {
+            if (snowflakeConnectionWorks) {
                 // If connected to Snowflake, use Snowflake data (even if empty)
                 this.posts = snowflakePosts;
                 logger.success(`Using ${snowflakePosts.length} posts from Snowflake (connected)`);

@@ -88,6 +88,8 @@ class SnowflakeService {
             return true;
         } catch (error) {
             logger.error('Failed to save posts to Snowflake:', error);
+            // Mark as disconnected if API calls are failing
+            this.isConnected = false;
             showNotification('Failed to save posts to database', 'error');
             return false;
         }
@@ -115,6 +117,8 @@ class SnowflakeService {
             return posts;
         } catch (error) {
             logger.error('Failed to load posts from Snowflake:', error);
+            // Mark as disconnected if API calls are failing
+            this.isConnected = false;
             return [];
         }
     }
