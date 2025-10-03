@@ -18,7 +18,7 @@
     <min-api-version>1.13</min-api-version>
 
     <source-location>
-      <url>http://localhost:3001/comments-app.html</url>
+      <url>https://arunchandar99.github.io/tableau-comments-app/comments-app.html</url>
     </source-location>
 
     <icon/>
