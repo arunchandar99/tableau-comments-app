@@ -1,115 +1,135 @@
-// Professional Snowflake REST API for Tableau Comments App
-// Full CRUD operations with automatic database execution and SQL generation fallback
+// Snowflake REST API for Tableau Comments App
+// Uses Snowflake SQL REST API v2 (works in Vercel serverless)
 
-const snowflake = require('snowflake-sdk');
-
-// Snowflake connection configuration - Updated with correct credentials
-const connectionConfig = {
+const SNOWFLAKE_CONFIG = {
     account: 'ZDDMCAD-FGC62251',
     username: 'ARUNCHANDAR99',
     password: 'Arunchandar@99',
     database: 'TABLEAU_EXTENSIONS',
     schema: 'COMMENTS_APP',
-    warehouse: 'COMPUTE_WH', // Will use default if none selected
+    warehouse: 'COMPUTE_WH',
     role: 'ACCOUNTADMIN'
 };
 
-let connection = null;
-let isSnowflakeAvailable = false;
-
-// In-memory storage for when Snowflake is not available
-let fallbackPosts = [];
-let fallbackComments = {};
-let sqlStatements = [];
-
-// Initialize Snowflake connection with fallback
-async function getConnection() {
-    if (connection && connection.isUp() && isSnowflakeAvailable) {
-        return connection;
-    }
-
+// Get Snowflake session token and master token
+async function getSnowflakeSession() {
     try {
-        return new Promise((resolve, reject) => {
-            connection = snowflake.createConnection(connectionConfig);
+        const loginUrl = `https://${SNOWFLAKE_CONFIG.account}.snowflakecomputing.com/session/v1/login-request`;
 
-            connection.connect((err, conn) => {
-                if (err) {
-                    console.error('❌ Failed to connect to Snowflake:', err.message);
-                    isSnowflakeAvailable = false;
-                    reject(err);
-                } else {
-                    console.log('✅ Connected to Snowflake successfully');
-                    isSnowflakeAvailable = true;
-                    resolve(conn);
+        const response = await fetch(loginUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify({
+                data: {
+                    CLIENT_APP_ID: 'Tableau',
+                    CLIENT_APP_VERSION: '1.0',
+                    LOGIN_NAME: SNOWFLAKE_CONFIG.username,
+                    PASSWORD: SNOWFLAKE_CONFIG.password
                 }
-            });
+            })
         });
+
+        if (!response.ok) {
+            throw new Error(`Login failed: ${response.status}`);
+        }
+
+        const result = await response.json();
+        return {
+            token: result.data?.token,
+            masterToken: result.data?.masterToken
+        };
     } catch (error) {
-        console.error('❌ Snowflake connection error:', error.message);
-        isSnowflakeAvailable = false;
+        console.error('❌ Snowflake login failed:', error.message);
         throw error;
     }
 }
 
-// Execute SQL with proper error handling and fallback
+// Execute SQL using Snowflake SQL REST API v2
 async function executeSQL(sqlText, binds = []) {
-    // Always try to connect first (don't rely on cached state)
     try {
-        console.log('🔄 Attempting Snowflake connection...');
-        const conn = await getConnection();
+        console.log('🔄 Executing SQL via Snowflake REST API...');
 
-        return new Promise((resolve, reject) => {
-            conn.execute({
-                sqlText: sqlText,
-                binds: binds,
-                complete: (err, stmt, rows) => {
-                    if (err) {
-                        console.error('❌ SQL execution error:', err.message);
-                        isSnowflakeAvailable = false;
-                        reject(err);
-                    } else {
-                        console.log('✅ SQL executed successfully in Snowflake');
-                        isSnowflakeAvailable = true;
-                        resolve({ success: true, data: rows, executed: true });
-                    }
-                }
-            });
-        });
-
-    } catch (error) {
-        console.error('❌ Snowflake connection failed, using fallback:', error.message);
-        isSnowflakeAvailable = false;
-
-        // Fallback: Store SQL for manual execution
-        console.log('📝 Storing SQL for manual execution:', sqlText);
-        let sqlWithBinds = sqlText;
+        // Replace bind parameters with actual values
+        let processedSQL = sqlText;
         if (binds.length > 0) {
             let bindIndex = 0;
-            sqlWithBinds = sqlText.replace(/\?/g, () => {
+            processedSQL = sqlText.replace(/\?/g, () => {
                 const value = binds[bindIndex++];
+                if (value === null || value === undefined) {
+                    return 'NULL';
+                }
                 return typeof value === 'string' ? `'${value.replace(/'/g, "''")}'` : value;
             });
         }
 
-        sqlStatements.push({
-            sql: sqlWithBinds,
-            timestamp: new Date().toISOString(),
-            binds: binds
+        // Get authentication session
+        const session = await getSnowflakeSession();
+
+        // Execute query using SQL API v2
+        const apiUrl = `https://${SNOWFLAKE_CONFIG.account}.snowflakecomputing.com/api/v2/statements`;
+
+        const response = await fetch(apiUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'Authorization': `Snowflake Token="${session.token}"`,
+                'X-Snowflake-Authorization-Token-Type': 'OAUTH'
+            },
+            body: JSON.stringify({
+                statement: processedSQL,
+                timeout: 60,
+                database: SNOWFLAKE_CONFIG.database,
+                schema: SNOWFLAKE_CONFIG.schema,
+                warehouse: SNOWFLAKE_CONFIG.warehouse
+            })
         });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error('❌ Snowflake API error:', response.status, errorText);
+            throw new Error(`Snowflake API error: ${response.status}`);
+        }
+
+        const result = await response.json();
+        console.log('✅ SQL executed successfully');
+
+        // Parse results from SQL API v2 format
+        const data = [];
+        if (result.data && result.resultSetMetaData) {
+            const columns = result.resultSetMetaData.rowType.map(col => col.name);
+            for (const row of result.data) {
+                const rowObj = {};
+                columns.forEach((col, idx) => {
+                    rowObj[col] = row[idx];
+                });
+                data.push(rowObj);
+            }
+        }
 
         return {
             success: true,
+            data: data,
+            executed: true
+        };
+
+    } catch (error) {
+        console.error('❌ Snowflake execution failed:', error.message);
+        return {
+            success: false,
             data: [],
             executed: false,
-            queued: true,
-            message: 'SQL queued for manual execution'
+            error: error.message
         };
     }
 }
 
-// API Handler - Professional REST API
+// API Handler
 export default async function handler(req, res) {
-    // Enable CORS for Tableau Extensions
+    // Enable CORS
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
@@ -136,10 +156,6 @@ export default async function handler(req, res) {
                 result = await loadPosts();
                 break;
 
-            case 'updatePost':
-                result = await updatePost(body.postId, body.post);
-                break;
-
             case 'deletePost':
                 result = await deletePost(body.postId);
                 break;
@@ -152,10 +168,6 @@ export default async function handler(req, res) {
                 result = await loadComments(body.postId);
                 break;
 
-            case 'updateComment':
-                result = await updateComment(body.commentId, body.comment);
-                break;
-
             case 'deleteComment':
                 result = await deleteComment(body.commentId);
                 break;
@@ -164,35 +176,23 @@ export default async function handler(req, res) {
                 result = await healthCheck();
                 break;
 
-
-            case 'getSQL':
-                result = {
-                    success: true,
-                    sql: generateBatchSQL(),
-                    statements: sqlStatements.length,
-                    isSnowflakeAvailable: isSnowflakeAvailable,
-                    message: `${sqlStatements.length} SQL statements ready for execution`
-                };
-                break;
-
             default:
                 result = { success: false, error: `Invalid action: ${action}` };
         }
 
-        console.log(`✅ Action ${action} completed successfully`);
+        console.log(`✅ Action ${action} completed`);
         res.status(200).json(result);
 
     } catch (error) {
         console.error('❌ API Error:', error);
         res.status(500).json({
             success: false,
-            error: error.message || 'Internal server error',
-            details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+            error: error.message || 'Internal server error'
         });
     }
 }
 
-// CREATE - Save posts to Snowflake
+// Save posts to Snowflake
 async function savePosts(posts) {
     if (!Array.isArray(posts)) {
         posts = [posts];
@@ -203,60 +203,33 @@ async function savePosts(posts) {
     }
 
     try {
-        const results = [];
         let successCount = 0;
 
         for (const post of posts) {
-            try {
-                // Use parameterized query to prevent SQL injection and handle special characters
-                const sql = `
-                    INSERT INTO POSTS (ID, POST_TYPE, METRIC_VALUE, METRIC_LABEL, CONTENT, AUTHOR, TIMESTAMP_MS, LIKES)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-                `;
+            const sql = `
+                INSERT INTO POSTS (ID, POST_TYPE, METRIC_VALUE, METRIC_LABEL, CONTENT, AUTHOR, TIMESTAMP_MS, LIKES)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            `;
 
-                const binds = [
-                    post.id || generateId(),
-                    post.type || 'General',
-                    post.metricValue || '',
-                    post.metricLabel || '',
-                    post.content || '',
-                    post.author || 'Tableau User',
-                    parseInt(post.timestamp) || Date.now(),
-                    parseInt(post.likes) || 0
-                ];
+            const binds = [
+                post.id || generateId(),
+                post.type || 'General',
+                post.metricValue || '',
+                post.metricLabel || '',
+                post.content || '',
+                post.author || 'Tableau User',
+                parseInt(post.timestamp) || Date.now(),
+                parseInt(post.likes) || 0
+            ];
 
-                const result = await executeSQL(sql, binds);
-
-                if (result.executed) {
-                    console.log(`✅ Post ${post.id} saved directly to Snowflake`);
-                } else {
-                    // Store in fallback when Snowflake is not available
-                    fallbackPosts.push(post);
-                    console.log(`📦 Post ${post.id} stored in fallback and SQL queued`);
-                }
-
-                results.push({ postId: post.id, success: true, executed: result.executed, queued: result.queued });
-                successCount++;
-
-            } catch (error) {
-                console.error(`❌ Failed to save post ${post.id}:`, error.message);
-                results.push({ postId: post.id, success: false, error: error.message });
-            }
+            const result = await executeSQL(sql, binds);
+            if (result.success) successCount++;
         }
-
-        const executedCount = results.filter(r => r.executed).length;
-        const queuedCount = results.filter(r => r.queued).length;
 
         return {
             success: successCount > 0,
-            message: isSnowflakeAvailable ?
-                `${executedCount}/${posts.length} posts saved directly to Snowflake` :
-                `${queuedCount}/${posts.length} posts queued (Snowflake unavailable) - use getSQL to sync`,
-            savedCount: successCount,
-            executedCount: executedCount,
-            queuedCount: queuedCount,
-            isSnowflakeAvailable: isSnowflakeAvailable,
-            results: results
+            message: `${successCount}/${posts.length} posts saved to Snowflake`,
+            savedCount: successCount
         };
 
     } catch (error) {
@@ -269,7 +242,7 @@ async function savePosts(posts) {
     }
 }
 
-// READ - Load posts from Snowflake
+// Load posts from Snowflake
 async function loadPosts() {
     try {
         const sql = `
@@ -282,6 +255,14 @@ async function loadPosts() {
         `;
 
         const result = await executeSQL(sql);
+
+        if (!result.success) {
+            return {
+                success: false,
+                error: result.error,
+                posts: []
+            };
+        }
 
         const posts = result.data.map(row => ({
             id: row.ID,
@@ -300,7 +281,7 @@ async function loadPosts() {
         return {
             success: true,
             posts: posts,
-            message: `Loaded ${posts.length} posts from Snowflake database`
+            message: `Loaded ${posts.length} posts from Snowflake`
         };
 
     } catch (error) {
@@ -313,58 +294,17 @@ async function loadPosts() {
     }
 }
 
-// UPDATE - Update post in Snowflake
-async function updatePost(postId, updatedPost) {
-    try {
-        const sql = `
-            UPDATE POSTS
-            SET POST_TYPE = ?, METRIC_VALUE = ?, METRIC_LABEL = ?,
-                CONTENT = ?, AUTHOR = ?, LIKES = ?
-            WHERE ID = ?
-        `;
-
-        const binds = [
-            updatedPost.type,
-            updatedPost.metricValue,
-            updatedPost.metricLabel,
-            updatedPost.content,
-            updatedPost.author,
-            parseInt(updatedPost.likes) || 0,
-            postId
-        ];
-
-        await executeSQL(sql, binds);
-
-        console.log(`✅ Post ${postId} updated in Snowflake`);
-
-        return {
-            success: true,
-            message: 'Post updated successfully in Snowflake'
-        };
-
-    } catch (error) {
-        console.error('❌ Error updating post:', error);
-        return {
-            success: false,
-            error: error.message
-        };
-    }
-}
-
-// DELETE - Delete post from Snowflake
+// Delete post from Snowflake
 async function deletePost(postId) {
     try {
-        // Delete comments first (foreign key constraint)
+        // Delete comments first
         await executeSQL('DELETE FROM COMMENTS WHERE POST_ID = ?', [postId]);
-
-        // Then delete the post
+        // Delete post
         await executeSQL('DELETE FROM POSTS WHERE ID = ?', [postId]);
-
-        console.log(`✅ Post ${postId} and related comments deleted from Snowflake`);
 
         return {
             success: true,
-            message: 'Post and related comments deleted successfully'
+            message: 'Post deleted successfully'
         };
 
     } catch (error) {
@@ -376,7 +316,7 @@ async function deletePost(postId) {
     }
 }
 
-// CREATE - Save comment to Snowflake
+// Save comment to Snowflake
 async function saveComment(postId, comment) {
     try {
         const sql = `
@@ -394,11 +334,9 @@ async function saveComment(postId, comment) {
 
         await executeSQL(sql, binds);
 
-        console.log(`✅ Comment saved to Snowflake for post ${postId}`);
-
         return {
             success: true,
-            message: 'Comment saved to Snowflake successfully'
+            message: 'Comment saved successfully'
         };
 
     } catch (error) {
@@ -410,7 +348,7 @@ async function saveComment(postId, comment) {
     }
 }
 
-// READ - Load comments from Snowflake
+// Load comments from Snowflake
 async function loadComments(postId) {
     try {
         const sql = `
@@ -422,6 +360,14 @@ async function loadComments(postId) {
 
         const result = await executeSQL(sql, [postId]);
 
+        if (!result.success) {
+            return {
+                success: false,
+                error: result.error,
+                comments: []
+            };
+        }
+
         const comments = result.data.map(row => ({
             id: row.ID,
             postId: row.POST_ID,
@@ -430,12 +376,10 @@ async function loadComments(postId) {
             timestamp: parseInt(row.TIMESTAMP_MS)
         }));
 
-        console.log(`✅ Loaded ${comments.length} comments for post ${postId}`);
-
         return {
             success: true,
             comments: comments,
-            message: `Loaded ${comments.length} comments from Snowflake`
+            message: `Loaded ${comments.length} comments`
         };
 
     } catch (error) {
@@ -448,45 +392,10 @@ async function loadComments(postId) {
     }
 }
 
-// UPDATE - Update comment in Snowflake
-async function updateComment(commentId, updatedComment) {
-    try {
-        const sql = `
-            UPDATE COMMENTS
-            SET AUTHOR = ?, CONTENT = ?
-            WHERE ID = ?
-        `;
-
-        const binds = [
-            updatedComment.author,
-            updatedComment.content,
-            commentId
-        ];
-
-        await executeSQL(sql, binds);
-
-        console.log(`✅ Comment ${commentId} updated in Snowflake`);
-
-        return {
-            success: true,
-            message: 'Comment updated successfully'
-        };
-
-    } catch (error) {
-        console.error('❌ Error updating comment:', error);
-        return {
-            success: false,
-            error: error.message
-        };
-    }
-}
-
-// DELETE - Delete comment from Snowflake
+// Delete comment from Snowflake
 async function deleteComment(commentId) {
     try {
         await executeSQL('DELETE FROM COMMENTS WHERE ID = ?', [commentId]);
-
-        console.log(`✅ Comment ${commentId} deleted from Snowflake`);
 
         return {
             success: true,
@@ -502,17 +411,18 @@ async function deleteComment(commentId) {
     }
 }
 
-// Health check endpoint
+// Health check
 async function healthCheck() {
     try {
-        await executeSQL('SELECT 1 as test');
+        const result = await executeSQL('SELECT 1 as TEST');
 
         return {
-            success: true,
-            message: 'Snowflake connection healthy',
+            success: result.success,
+            message: result.success ? 'Snowflake connection healthy' : 'Snowflake connection failed',
             timestamp: new Date().toISOString(),
-            database: connectionConfig.database,
-            schema: connectionConfig.schema
+            database: SNOWFLAKE_CONFIG.database,
+            schema: SNOWFLAKE_CONFIG.schema,
+            error: result.error || undefined
         };
 
     } catch (error) {
@@ -525,141 +435,7 @@ async function healthCheck() {
     }
 }
 
-
-// Utility function to generate unique IDs
+// Generate unique ID
 function generateId() {
     return Date.now().toString(36) + Math.random().toString(36).substr(2, 9);
 }
-
-
-// Generate batch SQL for manual execution
-function generateBatchSQL() {
-    if (sqlStatements.length === 0) {
-        return '-- No SQL statements to execute';
-    }
-
-    const header = `-- Snowflake Sync SQL - Generated ${new Date().toISOString()}
--- Statements: ${sqlStatements.length} | Database: ${connectionConfig.database}.${connectionConfig.schema}
--- Connection Status: ${isSnowflakeAvailable ? 'Available' : 'Unavailable - Using fallback mode'}
-
-USE DATABASE ${connectionConfig.database};
-USE SCHEMA ${connectionConfig.schema};
-
-`;
-
-    const statements = sqlStatements.map((item, index) =>
-        `-- Statement ${index + 1} - ${item.timestamp}\n${item.sql};`
-    ).join('\n\n');
-
-    return header + statements;
-}
-
-// Main API handler for Vercel serverless functions
-async function handler(req, res) {
-    // Set CORS headers
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-
-    // Handle preflight requests
-    if (req.method === 'OPTIONS') {
-        res.status(200).end();
-        return;
-    }
-
-    try {
-        const { action } = req.query;
-        let data = {};
-
-        // Parse request body for POST requests
-        if (req.method === 'POST' && req.body) {
-            data = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
-        }
-
-        console.log(`🔌 API Request: ${action}`, { method: req.method, hasData: !!data });
-
-        let result;
-
-        switch (action) {
-            case 'health':
-                result = await healthCheck();
-                break;
-
-
-            case 'savePosts':
-                if (!data.posts) {
-                    result = { success: false, error: 'Posts data required' };
-                } else {
-                    result = await savePosts(data.posts);
-                }
-                break;
-
-            case 'loadPosts':
-                result = await loadPosts();
-                break;
-
-            case 'deletePost':
-                if (!data.postId) {
-                    result = { success: false, error: 'Post ID required' };
-                } else {
-                    result = await deletePost(data.postId);
-                }
-                break;
-
-            case 'saveComment':
-                if (!data.postId || !data.comment) {
-                    result = { success: false, error: 'Post ID and comment data required' };
-                } else {
-                    result = await saveComment(data.postId, data.comment);
-                }
-                break;
-
-            case 'loadComments':
-                if (!data.postId) {
-                    result = { success: false, error: 'Post ID required' };
-                } else {
-                    result = await loadComments(data.postId);
-                }
-                break;
-
-            case 'deleteComment':
-                if (!data.commentId) {
-                    result = { success: false, error: 'Comment ID required' };
-                } else {
-                    result = await deleteComment(data.commentId);
-                }
-                break;
-
-            case 'getSQL':
-                result = {
-                    success: true,
-                    sql: generateBatchSQL(),
-                    statementCount: sqlStatements.length
-                };
-                break;
-
-            default:
-                result = {
-                    success: false,
-                    error: `Unknown action: ${action}`,
-                    availableActions: [
-                        'health', 'savePosts', 'loadPosts', 'deletePost', 'saveComment', 'loadComments',
-                        'deleteComment', 'getSQL'
-                    ]
-                };
-        }
-
-        console.log(`✅ API Response: ${action}`, { success: result.success });
-        res.status(200).json(result);
-
-    } catch (error) {
-        console.error('❌ API Handler Error:', error);
-        res.status(500).json({
-            success: false,
-            error: error.message,
-            timestamp: new Date().toISOString()
-        });
-    }
-}
-
-module.exports = handler;

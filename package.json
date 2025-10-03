@@ -1,1 +1,1 @@
-{"name":"comments-app-api","version":"1.0.0","description":"Tableau Comments App with Snowflake Integration","main":"api/snowflake.js","dependencies":{"snowflake-sdk":"^1.10.0"},"engines":{"node":"20.x"}}
+{"name":"comments-app-api","version":"1.0.0","description":"Tableau Comments App with Snowflake Integration","main":"api/snowflake.js","dependencies":{},"engines":{"node":"20.x"}}
